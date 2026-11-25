@@ -1,4 +1,13 @@
-const API_BASE = "http://127.0.0.1:5000/api";
+const STORAGE_KEYS = {
+    user: "mecaconnect_user",
+    lastAmountGnf: "mecaconnect_dernier_montant_gnf",
+    lastIntervention: "mecaconnect_derniere_intervention"
+};
+
+const API_BASE =
+    window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+        ? "http://127.0.0.1:5000/api"
+        : "https://VOTRE-URL-BACKEND/api";
 
 const DOMAIN_TYPO_SUGGESTIONS = {
     "gmial.com": "gmail.com",
@@ -37,14 +46,34 @@ document.addEventListener("DOMContentLoaded", () => {
     initInscriptionForm();
     initConnexionForm();
     initFilters();
+    window.addEventListener("beforeunload", stopCameraStream);
 });
 
 function getCurrentUser() {
     try {
-        return JSON.parse(localStorage.getItem("mecaconnect_user") || "null");
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || "null");
     } catch {
         return null;
     }
+}
+
+function setCurrentUser(user) {
+    if (!user) {
+        localStorage.removeItem(STORAGE_KEYS.user);
+        return;
+    }
+    const safeUser = {
+        id: user.id,
+        nom_complet: user.nom_complet,
+        telephone: user.telephone,
+        email: user.email,
+        role: user.role,
+        ville: user.ville,
+        quartier: user.quartier,
+        email_verifie: user.email_verifie,
+        kyc_statut: user.kyc_statut
+    };
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(safeUser));
 }
 
 function initAuthHeader() {
@@ -60,7 +89,7 @@ function initAuthHeader() {
     document.querySelectorAll("[data-auth-logout]").forEach((btn) => {
         btn.style.display = user ? "" : "none";
         btn.addEventListener("click", () => {
-            localStorage.removeItem("mecaconnect_user");
+            setCurrentUser(null);
             window.location.href = "connexion.html";
         });
     });
@@ -292,6 +321,13 @@ function initOtpFlow() {
     });
 }
 
+function stopCameraStream() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach((t) => t.stop());
+        cameraStream = null;
+    }
+}
+
 function initCameraKyc() {
     const startBtn = document.getElementById("startCameraBtn");
     const takeBtn = document.getElementById("takeSelfieBtn");
@@ -299,6 +335,7 @@ function initCameraKyc() {
 
     startBtn?.addEventListener("click", async () => {
         try {
+            stopCameraStream();
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             if (takeBtn) takeBtn.disabled = false;
             if (statusEl) {
@@ -315,10 +352,7 @@ function initCameraKyc() {
 
     takeBtn?.addEventListener("click", () => {
         selfieCaptureOk = true;
-        if (cameraStream) {
-            cameraStream.getTracks().forEach((t) => t.stop());
-            cameraStream = null;
-        }
+        stopCameraStream();
         if (statusEl) {
             statusEl.style.color = "#15803d";
             statusEl.textContent = "Selfie capturé et validé pour le dossier KYC.";
@@ -401,7 +435,7 @@ function initInscriptionForm() {
                 return;
             }
 
-            localStorage.setItem("mecaconnect_user", JSON.stringify(data.user));
+            setCurrentUser(data.user);
             window.location.href = "index.html";
         } catch {
             if (feedback) {
@@ -440,7 +474,7 @@ function initConnexionForm() {
                 return;
             }
 
-            localStorage.setItem("mecaconnect_user", JSON.stringify(data.user));
+            setCurrentUser(data.user);
             window.location.href = data.user.role === "admin" ? "admin.html" : "index.html";
         } catch {
             if (msgEl) {
