@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inscription &amp; Vérification KYC — MecaConnect Guinée</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body class="inscription-page">
+    <header class="topbar topbar-light">
+        <div class="topbar-brand">
+            <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
+        </div>
+
+        <div class="topbar-actions">
+            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
+            <a href="notifications.html" class="btn-notif">
+                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
+            </a>
+            <a href="connexion.html" class="btn-ghost-auth auth-guest-only" data-auth-login>Se connecter</a>
+            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="sub-nav-bar">
+        <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
+        <a href="inscription.html" class="sub-nav-link active">🪪 Inscription KYC</a>
+        <a href="connexion.html" class="sub-nav-link">🔐 Connexion</a>
+        <a href="paiement.html" class="sub-nav-link">💳 Paiements GNF</a>
+    </div>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav" aria-label="Menu principal">
+                <a href="index.html" class="nav-item">🏠 <span>Accueil</span></a>
+                <a href="chauffeur.html" class="nav-item">🚗 <span>Chauffeur</span></a>
+                <a href="mecanicien.html" class="nav-item">🛠️ <span>Mécanicien</span></a>
+                <a href="demande.html" class="nav-item">🚨 <span>Demande</span></a>
+                <a href="paiement.html" class="nav-item">💳 <span>Paiement</span></a>
+                <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
+                <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
+                <a href="admin.html" class="nav-item">🛡️ <span>Administration</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="form-card">
+                <h1>Inscription &amp; Vérification KYC</h1>
+                <p>
+                    Créez votre compte chauffeur ou mécanicien en Guinée avec vérification d'e-mail et d'identité (un seul compte par document officiel).
+                </p>
+
+                <form id="inscriptionForm" novalidate>
+                    <div class="section-title">Informations personnelles</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nomComplet">Nom complet</label>
+                            <input type="text" id="nomComplet" name="nom_complet" placeholder="Ex. Mamadou Bah" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="telephone">Téléphone (+224)</label>
+                            <input type="tel" id="telephone" name="telephone" placeholder="Ex. +224 620 00 00 00" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Adresse e-mail</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="email" id="email" name="email" placeholder="Ex. mamadou@exemple.gn" required />
+                                <button type="button" id="sendOtpBtn" class="btn-secondary" style="white-space: nowrap;">Envoyer le code</button>
+                            </div>
+                            <small id="emailStatusHint" class="kyc-hint">Un code à 6 chiffres sera envoyé pour confirmer que l'adresse existe.</small>
+                        </div>
+
+                        <div class="form-group" id="otpGroup" style="display: none;">
+                            <label for="emailOtp">Code de vérification e-mail (6 chiffres)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" id="emailOtp" name="email_otp" maxlength="6" inputmode="numeric" placeholder="Ex. 482910" />
+                                <button type="button" id="verifyOtpBtn" class="btn-primary" style="white-space: nowrap;">Valider le code</button>
+                            </div>
+                            <small id="otpStatusHint" class="kyc-hint"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="roleCompte">Rôle sur la plateforme</label>
+                            <select id="roleCompte" name="role" required>
+                                <option value="chauffeur">Chauffeur</option>
+                                <option value="mecanicien">Mécanicien / Atelier</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ville">Ville / Préfecture</label>
+                            <select id="ville" name="ville" required>
+                                <option value="Conakry">Conakry</option>
+                                <option value="Labé">Labé</option>
+                                <option value="Kankan">Kankan</option>
+                                <option value="Nzérékoré">Nzérékoré</option>
+                                <option value="Mamou">Mamou</option>
+                                <option value="Kindia">Kindia</option>
+                                <option value="Boké">Boké</option>
+                                <option value="Faranah">Faranah</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quartier">Quartier / Commune</label>
+                            <input type="text" id="quartier" name="quartier" placeholder="Ex. Kipé ou Centre-ville" required />
+                        </div>
+                    </div>
+
+                    <div class="section-title">Pièce d'identité officielle (Guinée)</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="typePiece">Type de pièce d'identité</label>
+                            <select id="typePiece" name="type_piece" required>
+                                <option value="CNI Guinée">CNI Guinée</option>
+                                <option value="Passeport">Passeport</option>
+                                <option value="Permis de conduire">Permis de conduire</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="numeroPiece">Numéro de la pièce</label>
+                            <input type="text" id="numeroPiece" name="numero_piece" placeholder="Ex. CNI-GN-001234" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dateExpiration">Date d'expiration de la pièce</label>
+                            <input type="date" id="dateExpiration" name="date_expiration" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="refAtelier">Référence atelier (si mécanicien)</label>
+                            <input type="text" id="refAtelier" name="ref_atelier" placeholder="Ex. ATELIER-LABE-01" />
+                        </div>
+                    </div>
+
+                    <div class="kyc-grid">
+                        <div class="kyc-box">
+                            <label for="photoPiece">1. Photo nette de la pièce d'identité (visage visible)</label>
+                            <input type="file" id="photoPiece" name="photo_piece" accept="image/*" required />
+                            <p class="kyc-hint" id="docCheckStatus">Un seul compte est autorisé par document d'identité.</p>
+                        </div>
+
+                        <div class="kyc-box">
+                            <label>2. Selfie en direct (caméra obligatoire)</label>
+                            <p class="kyc-hint" id="selfieStatus">Cliquez sur « Activer la caméra » puis « Prendre le selfie ».</p>
+                            <div class="kyc-actions">
+                                <button type="button" id="startCameraBtn" class="btn-secondary">📷 Activer la caméra</button>
+                                <button type="button" id="takeSelfieBtn" class="btn-primary" disabled>🤳 Prendre le selfie</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Sécurité du compte</div>
+                    <div class="form-group">
+                        <label for="motDePasse">Mot de passe</label>
+                        <input type="password" id="motDePasse" name="mot_de_passe" placeholder="Choisissez un mot de passe" required />
+                    </div>
+
+                    <div class="hero-actions">
+                        <button type="submit" id="submitInscriptionBtn" class="btn-primary">Vérifier mon identité et créer le compte</button>
+                        <a href="connexion.html" class="btn-secondary">J'ai déjà un compte</a>
+                    </div>
+                    <p id="inscriptionFeedback" class="kyc-hint" style="margin-top: 12px;"></p>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <div class="mechanical-stage" aria-hidden="true">
+        <div class="mechanical-track">
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

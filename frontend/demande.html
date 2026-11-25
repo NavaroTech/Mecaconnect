@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demande d'intervention — MecaConnect Guinée</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body class="demande-page">
+    <header class="topbar topbar-light">
+        <div class="topbar-brand">
+            <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
+        </div>
+
+        <div class="topbar-actions">
+            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
+            <a href="notifications.html" class="btn-notif">
+                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
+            </a>
+            <a href="connexion.html" class="btn-ghost-auth auth-guest-only" data-auth-login>Se connecter</a>
+            <a href="inscription.html" class="btn-cta-orange auth-guest-only">Créer un compte</a>
+            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="sub-nav-bar">
+        <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
+        <a href="demande.html?mode=urgence" class="sub-nav-link" id="navUrgence">🚨 Dépannage urgent</a>
+        <a href="demande.html?mode=rdv" class="sub-nav-link" id="navRdv">📅 Rendez-vous atelier</a>
+        <a href="paiement.html" class="sub-nav-link">💳 Paiements GNF</a>
+    </div>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav" aria-label="Menu principal">
+                <a href="index.html" class="nav-item">🏠 <span>Accueil</span></a>
+                <a href="chauffeur.html" class="nav-item">🚗 <span>Chauffeur</span></a>
+                <a href="mecanicien.html" class="nav-item">🛠️ <span>Mécanicien</span></a>
+                <a href="demande.html" class="nav-item">🚨 <span>Demande</span></a>
+                <a href="paiement.html" class="nav-item">💳 <span>Paiement</span></a>
+                <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
+                <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
+                <a href="admin.html" class="nav-item">🛡️ <span>Administration</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="form-card">
+                <div class="card-header">
+                    <h1 id="demandeTitle">Nouvelle demande d'intervention</h1>
+                    <span class="status-badge" id="demandeModeBadge">Dépannage urgent</span>
+                </div>
+                <p>
+                    Décrivez votre panne ou réservez un créneau en atelier en Guinée. Les tarifs sont indiqués en Francs guinéens (GNF).
+                </p>
+
+                <form id="demandeForm" novalidate>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="typeIntervention">Type d'intervention</label>
+                            <select id="typeIntervention" name="type_intervention" required>
+                                <option value="urgence">Dépannage urgent sur route / quartier</option>
+                                <option value="rdv">Rendez-vous en atelier</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="categoriePanne">Catégorie de panne / service</label>
+                            <select id="categoriePanne" name="categorie_panne" required>
+                                <option value="batterie" data-tarif="150000">Batterie / Démarrage — 150 000 GNF</option>
+                                <option value="pneus" data-tarif="120000">Pneus / Crevaison — 120 000 GNF</option>
+                                <option value="freinage" data-tarif="180000">Freinage / Plaquettes — 180 000 GNF</option>
+                                <option value="moteur" data-tarif="200000">Moteur / Diagnostic — 200 000 GNF</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="villeDemande">Ville / Préfecture</label>
+                            <select id="villeDemande" name="ville" required>
+                                <option value="Labé">Labé</option>
+                                <option value="Conakry">Conakry</option>
+                                <option value="Kankan">Kankan</option>
+                                <option value="Mamou">Mamou</option>
+                                <option value="Kindia">Kindia</option>
+                                <option value="Nzérékoré">Nzérékoré</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quartierDemande">Quartier / Repère précis</label>
+                            <input
+                                type="text"
+                                id="quartierDemande"
+                                name="quartier"
+                                placeholder="Ex. Centre-ville Labé ou Kipé Carrefour"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vehiculeInfo">Véhicule (marque, modèle, immatriculation)</label>
+                            <input
+                                type="text"
+                                id="vehiculeInfo"
+                                name="vehicule"
+                                placeholder="Ex. Toyota Corolla — RC 1234 GN"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="telephoneContact">Téléphone de contact (+224)</label>
+                            <input
+                                type="tel"
+                                id="telephoneContact"
+                                name="telephone"
+                                placeholder="Ex. +224 620 00 00 00"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="creneauGroup" style="display: none;">
+                        <label for="dateCreneau">Date et heure souhaitées (Rendez-vous atelier)</label>
+                        <input type="datetime-local" id="dateCreneau" name="date_creneau" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descriptionPanne">Détails de la panne ou de la demande</label>
+                        <textarea
+                            id="descriptionPanne"
+                            name="description"
+                            rows="3"
+                            placeholder="Précisez les symptômes (voyant allumé, bruit, démarrage impossible...)"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="card-header" style="margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line-light); border-bottom: none;">
+                        <strong>Tarif estimé d'intervention :</strong>
+                        <span class="status-badge" id="tarifEstime">150 000 GNF</span>
+                    </div>
+
+                    <p id="demandeFeedback" class="kyc-hint" role="alert"></p>
+
+                    <div class="hero-actions">
+                        <button type="submit" id="submitDemandeBtn" class="btn-primary">Envoyer la demande</button>
+                        <a href="paiement.html" class="btn-secondary">Passer au paiement GNF</a>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card" id="mesDemandesSection">
+                <h2>Mes demandes récentes</h2>
+                <div id="listeDemandes">
+                    <article class="demande-card">
+                        <div class="card-header">
+                            <strong>Batterie / Démarrage — Labé (Centre-ville)</strong>
+                            <span class="status-badge">En attente d'un mécanicien</span>
+                        </div>
+                        <p><strong>Véhicule :</strong> Toyota Hilux • <strong>Tarif :</strong> 150 000 GNF</p>
+                        <p><strong>Statut :</strong> Aucune intervention en cours</p>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="mechanical-stage" aria-hidden="true">
+        <div class="mechanical-track">
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        (function initDemandePage() {
+            const params = new URLSearchParams(window.location.search);
+            const modeParam = params.get("mode");
+            const typeSelect = document.getElementById("typeIntervention");
+            const modeBadge = document.getElementById("demandeModeBadge");
+            const demandeTitle = document.getElementById("demandeTitle");
+            const creneauGroup = document.getElementById("creneauGroup");
+            const catSelect = document.getElementById("categoriePanne");
+            const tarifBadge = document.getElementById("tarifEstime");
+            const form = document.getElementById("demandeForm");
+            const listeDemandes = document.getElementById("listeDemandes");
+            const feedback = document.getElementById("demandeFeedback");
+
+            const syncMode = () => {
+                const isRdv = typeSelect?.value === "rdv";
+                if (creneauGroup) creneauGroup.style.display = isRdv ? "flex" : "none";
+                if (modeBadge) modeBadge.textContent = isRdv ? "Rendez-vous atelier" : "Dépannage urgent";
+                if (demandeTitle) {
+                    demandeTitle.textContent = isRdv
+                        ? "Prendre rendez-vous en atelier"
+                        : "Demande de dépannage urgent";
+                }
+                document.getElementById("navUrgence")?.classList.toggle("active", !isRdv);
+                document.getElementById("navRdv")?.classList.toggle("active", isRdv);
+            };
+
+            const syncTarif = () => {
+                const opt = catSelect?.options[catSelect.selectedIndex];
+                const montant = Number(opt?.getAttribute("data-tarif") || 150000);
+                if (tarifBadge) {
+                    tarifBadge.textContent = `${montant.toLocaleString("fr-FR")} GNF`;
+                }
+            };
+
+            if (modeParam === "rdv" && typeSelect) {
+                typeSelect.value = "rdv";
+            } else if (modeParam === "urgence" && typeSelect) {
+                typeSelect.value = "urgence";
+            }
+
+            typeSelect?.addEventListener("change", syncMode);
+            catSelect?.addEventListener("change", syncTarif);
+            syncMode();
+            syncTarif();
+
+            form?.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const quartier = (document.getElementById("quartierDemande")?.value || "").trim();
+                const vehicule = (document.getElementById("vehiculeInfo")?.value || "").trim();
+                const telephone = (document.getElementById("telephoneContact")?.value || "").trim();
+                const description = (document.getElementById("descriptionPanne")?.value || "").trim();
+                const ville = document.getElementById("villeDemande")?.value || "Labé";
+                const opt = catSelect?.options[catSelect.selectedIndex];
+                const libelleCat = opt?.textContent?.split("—")[0]?.trim() || "Intervention";
+                const tarif = Number(opt?.getAttribute("data-tarif") || 150000);
+
+                if (!quartier || !vehicule || !telephone || !description) {
+                    if (feedback) {
+                        feedback.style.color = "#dc2626";
+                        feedback.textContent = "Veuillez renseigner le quartier, le véhicule, le téléphone et la description de la panne.";
+                    }
+                    return;
+                }
+
+                localStorage.setItem("mecaconnect_dernier_montant_gnf", String(tarif));
+                localStorage.setItem("mecaconnect_derniere_intervention", `${libelleCat} — ${ville}`);
+
+                if (listeDemandes) {
+                    const card = document.createElement("article");
+                    card.className = "demande-card";
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <strong>${libelleCat} — ${ville} (${quartier})</strong>
+                            <span class="status-badge">Demande enregistrée</span>
+                        </div>
+                        <p><strong>Véhicule :</strong> ${vehicule} • <strong>Tarif :</strong> ${tarif.toLocaleString("fr-FR")} GNF</p>
+                        <p><strong>Contact :</strong> ${telephone} — ${description}</p>
+                    `;
+                    listeDemandes.prepend(card);
+                }
+
+                if (feedback) {
+                    feedback.style.color = "#15803d";
+                    feedback.textContent = `Demande enregistrée (${tarif.toLocaleString("fr-FR")} GNF). Vous pouvez régler via Orange Money, MTN MoMo ou espèces.`;
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

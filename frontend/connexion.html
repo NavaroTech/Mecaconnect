@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connexion — MecaConnect Guinée</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body class="connexion-page">
+    <header class="topbar topbar-light">
+        <div class="topbar-brand">
+            <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
+        </div>
+
+        <div class="topbar-actions">
+            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
+            <a href="notifications.html" class="btn-notif">
+                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
+            </a>
+            <a href="inscription.html" class="btn-cta-orange auth-guest-only">Créer un compte</a>
+            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="sub-nav-bar">
+        <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
+        <a href="inscription.html" class="sub-nav-link">🪪 Inscription KYC</a>
+        <a href="connexion.html" class="sub-nav-link active">🔐 Connexion</a>
+        <a href="paiement.html" class="sub-nav-link">💳 Paiements GNF</a>
+    </div>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav" aria-label="Menu principal">
+                <a href="index.html" class="nav-item">🏠 <span>Accueil</span></a>
+                <a href="chauffeur.html" class="nav-item">🚗 <span>Chauffeur</span></a>
+                <a href="mecanicien.html" class="nav-item">🛠️ <span>Mécanicien</span></a>
+                <a href="demande.html" class="nav-item">🚨 <span>Demande</span></a>
+                <a href="paiement.html" class="nav-item">💳 <span>Paiement</span></a>
+                <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
+                <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
+                <a href="admin.html" class="nav-item">🛡️ <span>Administration</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="form-card" style="max-width: 560px; margin: 0 auto;">
+                <h1>Connexion à MécaConnect</h1>
+                <p>
+                    Accédez à votre espace chauffeur, mécanicien ou administrateur en Guinée.
+                </p>
+
+                <form id="connexionForm" novalidate>
+                    <div class="form-group">
+                        <label for="loginEmail">Adresse e-mail</label>
+                        <input
+                            type="email"
+                            id="loginEmail"
+                            name="email"
+                            placeholder="Ex. mamadou@exemple.gn"
+                            autocomplete="email"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPassword">Mot de passe</label>
+                        <input
+                            type="password"
+                            id="loginPassword"
+                            name="mot_de_passe"
+                            placeholder="Entrez votre mot de passe"
+                            autocomplete="current-password"
+                            required
+                        />
+                    </div>
+
+                    <p id="loginFeedback" class="kyc-hint" role="alert"></p>
+
+                    <div class="hero-actions">
+                        <button type="submit" id="submitConnexionBtn" class="btn-primary">Se connecter</button>
+                        <a href="inscription.html" class="btn-secondary">Créer un compte KYC</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <div class="mechanical-stage" aria-hidden="true">
+        <div class="mechanical-track">
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

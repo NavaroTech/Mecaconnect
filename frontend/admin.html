@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Administration — MecaConnect Guinée</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-brand">
+            <a href="index.html" class="logo">🔧 <span>MecaConnect</span> <small>Guinée — Admin</small></a>
+        </div>
+        <div class="topbar-actions">
+            <span class="user-greeting">Bonjour, <strong data-user-name>Administrateur</strong></span>
+            <a href="notifications.html" class="btn-notif">
+                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
+            </a>
+            <a href="connexion.html" class="auth-guest-only" data-auth-login>Connexion</a>
+            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav" aria-label="Menu principal">
+                <a href="index.html" class="nav-item">🏠 <span>Accueil</span></a>
+                <a href="admin.html" class="nav-item active">🛡️ <span>Administration</span></a>
+                <a href="chauffeur.html" class="nav-item">🚗 <span>Espace Chauffeur</span></a>
+                <a href="mecanicien.html" class="nav-item">🛠️ <span>Espace Mécanicien</span></a>
+                <a href="demande.html" class="nav-item">🚨 <span>Nouvelle Demande</span></a>
+                <a href="paiement.html" class="nav-item">💳 <span>Paiements GNF</span></a>
+                <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
+                <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="page-header card">
+                <div>
+                    <h1>🛡️ Tableau de bord Administrateur</h1>
+                    <p>Supervision globale MecaConnect — Conakry, Labé et toute la République de Guinée.</p>
+                </div>
+                <button type="button" id="refreshAdminBtn" class="btn-primary">🔄 Actualiser MySQL</button>
+            </section>
+
+            <!-- Statistiques KPI -->
+            <section class="admin-stats-grid" id="adminStatsGrid">
+                <article class="stat-card card">
+                    <h3>Utilisateurs inscrits</h3>
+                    <p class="stat-value" id="statTotalUsers">0</p>
+                    <small id="statUsersSplit">0 chauffeurs · 0 mécaniciens</small>
+                </article>
+                <article class="stat-card card">
+                    <h3>Demandes d'intervention</h3>
+                    <p class="stat-value" id="statTotalDemandes">0</p>
+                    <small id="statDemandesPending">0 en attente</small>
+                </article>
+                <article class="stat-card card">
+                    <h3>Volume encaissé (GNF)</h3>
+                    <p class="stat-value" id="statTotalRevenus">0 GNF</p>
+                    <small>Orange Money · MTN MoMo · Espèces</small>
+                </article>
+            </section>
+
+            <!-- Gestion des utilisateurs et pièces d'identité -->
+            <section class="card admin-section">
+                <div class="section-head">
+                    <h2>👥 Utilisateurs & Vérification d'identité (Guinée)</h2>
+                    <input
+                        type="text"
+                        id="adminUserSearch"
+                        placeholder="Filtrer par nom, e-mail, rôle, pièce ou atelier..."
+                    />
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom & Rôle</th>
+                                <th>Contact (+224)</th>
+                                <th>Pièce d'identité</th>
+                                <th>Atelier</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersTableBody">
+                            <tr><td colspan="7">Chargement des utilisateurs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Supervision des demandes -->
+            <section class="card admin-section">
+                <div class="section-head">
+                    <h2>🚨 Supervision des demandes</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Réf.</th>
+                                <th>Chauffeur</th>
+                                <th>Véhicule & Panne</th>
+                                <th>Localisation</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminDemandesTableBody">
+                            <tr><td colspan="7">Chargement des demandes...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Historique des paiements GNF -->
+            <section class="card admin-section">
+                <div class="section-head">
+                    <h2>💳 Transactions & Paiements en GNF</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Réf. Demande</th>
+                                <th>Montant (GNF)</th>
+                                <th>Mode de paiement</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminPaiementsTableBody">
+                            <tr><td colspan="6">Chargement des paiements...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Bande animée pièces mécaniques en bas -->
+    <div class="mechanical-stage" aria-hidden="true">
+        <div class="mechanical-track">
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

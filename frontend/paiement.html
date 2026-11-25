@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paiements GNF — MecaConnect Guinée</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body class="paiement-page">
+    <header class="topbar topbar-light">
+        <div class="topbar-brand">
+            <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
+        </div>
+
+        <div class="topbar-actions">
+            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
+            <a href="notifications.html" class="btn-notif">
+                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
+            </a>
+            <a href="connexion.html" class="btn-ghost-auth auth-guest-only" data-auth-login>Se connecter</a>
+            <a href="inscription.html" class="btn-cta-orange auth-guest-only">Créer un compte</a>
+            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="sub-nav-bar">
+        <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
+        <a href="demande.html?mode=urgence" class="sub-nav-link">🚨 Dépannage urgent</a>
+        <a href="demande.html?mode=rdv" class="sub-nav-link">📅 Rendez-vous atelier</a>
+        <a href="paiement.html" class="sub-nav-link active">💳 Paiements GNF</a>
+    </div>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav" aria-label="Menu principal">
+                <a href="index.html" class="nav-item">🏠 <span>Accueil</span></a>
+                <a href="chauffeur.html" class="nav-item">🚗 <span>Chauffeur</span></a>
+                <a href="mecanicien.html" class="nav-item">🛠️ <span>Mécanicien</span></a>
+                <a href="demande.html" class="nav-item">🚨 <span>Demande</span></a>
+                <a href="paiement.html" class="nav-item">💳 <span>Paiement</span></a>
+                <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
+                <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
+                <a href="admin.html" class="nav-item">🛡️ <span>Administration</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="form-card" style="max-width: 720px;">
+                <div class="card-header">
+                    <h1>Paiement en Francs guinéens (GNF)</h1>
+                    <span class="status-badge">Guinée (+224)</span>
+                </div>
+                <p>
+                    Réglez votre intervention mécanique via <strong>Orange Money</strong>, <strong>MTN MoMo</strong> ou <strong>Espèces</strong>.
+                </p>
+
+                <form id="paiementForm" novalidate>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="referenceIntervention">Intervention / Référence</label>
+                            <input
+                                type="text"
+                                id="referenceIntervention"
+                                name="reference"
+                                value="Batterie / Démarrage — Labé"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="montantGnf">Montant à régler (GNF)</label>
+                            <input
+                                type="number"
+                                id="montantGnf"
+                                name="montant_gnf"
+                                min="10000"
+                                step="5000"
+                                value="150000"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="moyenPaiement">Moyen de paiement</label>
+                            <select id="moyenPaiement" name="moyen_paiement" required>
+                                <option value="Orange Money">Orange Money Guinée</option>
+                                <option value="MTN MoMo">MTN Mobile Money (MoMo)</option>
+                                <option value="Espèces">Espèces (GNF) sur place</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="telephonePaiementGroup">
+                            <label for="telephonePaiement">Numéro mobile (+224)</label>
+                            <input
+                                type="tel"
+                                id="telephonePaiement"
+                                name="telephone"
+                                placeholder="Ex. +224 620 00 00 00"
+                            />
+                        </div>
+                    </div>
+
+                    <p id="paiementFeedback" class="kyc-hint" role="alert"></p>
+
+                    <div class="hero-actions">
+                        <button type="submit" class="btn-pay">Confirmer le paiement</button>
+                        <a href="demande.html" class="btn-secondary">Retour aux demandes</a>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card" style="max-width: 720px;">
+                <h2>Historique des paiements</h2>
+                <div id="historiquePaiements">
+                    <article class="paiement-item">
+                        <div class="card-header">
+                            <strong>Garage Fouta Auto — Labé</strong>
+                            <span class="status-badge">Payé • 150 000 GNF</span>
+                        </div>
+                        <p><strong>Mode :</strong> Orange Money Guinée • <strong>Réf :</strong> MC-GN-1042</p>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="mechanical-stage" aria-hidden="true">
+        <div class="mechanical-track">
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        (function initPaiementPage() {
+            const refInput = document.getElementById("referenceIntervention");
+            const montantInput = document.getElementById("montantGnf");
+            const moyenSelect = document.getElementById("moyenPaiement");
+            const telGroup = document.getElementById("telephonePaiementGroup");
+            const form = document.getElementById("paiementForm");
+            const feedback = document.getElementById("paiementFeedback");
+            const historique = document.getElementById("historiquePaiements");
+
+            const savedIntervention = localStorage.getItem("mecaconnect_derniere_intervention");
+            const savedMontant = localStorage.getItem("mecaconnect_dernier_montant_gnf");
+            if (savedIntervention && refInput) refInput.value = savedIntervention;
+            if (savedMontant && montantInput) montantInput.value = savedMontant;
+
+            const syncMoyen = () => {
+                const isCash = moyenSelect?.value === "Espèces";
+                if (telGroup) telGroup.style.display = isCash ? "none" : "flex";
+            };
+            moyenSelect?.addEventListener("change", syncMoyen);
+            syncMoyen();
+
+            form?.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const ref = (refInput?.value || "").trim();
+                const montant = Number(montantInput?.value || 0);
+                const moyen = moyenSelect?.value || "Orange Money";
+                const tel = (document.getElementById("telephonePaiement")?.value || "").trim();
+
+                if (!ref || montant < 10000) {
+                    if (feedback) {
+                        feedback.style.color = "#dc2626";
+                        feedback.textContent = "Indiquez une intervention valide et un montant d'au moins 10 000 GNF.";
+                    }
+                    return;
+                }
+
+                if (moyen !== "Espèces" && !tel) {
+                    if (feedback) {
+                        feedback.style.color = "#dc2626";
+                        feedback.textContent = "Veuillez saisir le numéro +224 associé au compte mobile.";
+                    }
+                    return;
+                }
+
+                const codeRef = `MC-GN-${Math.floor(1000 + Math.random() * 9000)}`;
+                if (historique) {
+                    const item = document.createElement("article");
+                    item.className = "paiement-item";
+                    item.innerHTML = `
+                        <div class="card-header">
+                            <strong>${ref}</strong>
+                            <span class="status-badge">Confirmé • ${montant.toLocaleString("fr-FR")} GNF</span>
+                        </div>
+                        <p><strong>Mode :</strong> ${moyen}${tel ? ` (${tel})` : ""} • <strong>Réf :</strong> ${codeRef}</p>
+                    `;
+                    historique.prepend(item);
+                }
+
+                if (feedback) {
+                    feedback.style.color = "#15803d";
+                    feedback.textContent = `Paiement de ${montant.toLocaleString("fr-FR")} GNF enregistré via ${moyen} (Réf. ${codeRef}).`;
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

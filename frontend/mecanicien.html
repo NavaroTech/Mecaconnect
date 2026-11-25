@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Espace Mécanicien — MecaConnect Guinée</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-brand">
+            <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
+        </div>
+        <div class="topbar-actions">
+            <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
+            <a href="notifications.html" class="btn-notif">
+                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
+            </a>
+            <a href="connexion.html" class="auth-guest-only" data-auth-login>Connexion</a>
+            <a href="inscription.html" class="btn-primary auth-guest-only" data-auth-login>Inscription</a>
+            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav" aria-label="Menu principal">
+                <a href="index.html" class="nav-item">🏠 <span>Accueil</span></a>
+                <a href="chauffeur.html" class="nav-item">🚗 <span>Chauffeur</span></a>
+                <a href="mecanicien.html" class="nav-item active">🛠️ <span>Mécanicien</span></a>
+                <a href="demande.html" class="nav-item">🚨 <span>Demande</span></a>
+                <a href="paiement.html" class="nav-item">💳 <span>Paiement</span></a>
+                <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
+                <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
+                <a href="admin.html" class="nav-item">🛡️ <span>Administration</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section class="hero-card card">
+                <h1>🛠️ Espace Mécanicien &amp; Atelier</h1>
+                <p>Consultez les demandes des chauffeurs en Guinée, acceptez les interventions et marquez-les comme terminées.</p>
+            </section>
+
+            <section class="card">
+                <div class="section-heading">
+                    <h2>🔧 Demandes disponibles</h2>
+                    <p>Cliquez sur « Accepter » ou « Terminer » pour mettre à jour le statut.</p>
+                </div>
+                <div id="demandesList" class="cards-grid" data-demandes-list></div>
+            </section>
+        </main>
+    </div>
+
+    <div class="mechanical-stage" aria-hidden="true">
+        <div class="mechanical-track">
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

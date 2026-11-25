@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact — MécaConnect</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand">
+      <span class="logo">🔧</span>
+      <div>
+        <h1><a href="index.html" style="text-decoration:none; color:inherit;">MécaConnect</a></h1>
+        <span class="tagline">Chauffeurs &amp; Mécaniciens connectés</span>
+      </div>
+    </div>
+
+    <nav class="nav-links">
+      <a href="index.html">Accueil</a>
+      <a href="chauffeur.html">Chauffeur</a>
+      <a href="mecanicien.html">Mécanicien</a>
+      <a href="demande.html">Demande</a>
+      <a href="paiement.html">Paiement</a>
+      <a href="profil.html">Profil</a>
+      <a href="contact.html" class="active">Contact</a>
+    </nav>
+
+    <div class="auth-actions">
+      <a href="connexion.html" class="btn-outline">Connexion</a>
+      <a href="inscription.html" class="btn-primary">Inscription</a>
+    </div>
+  </header>
+
+  <main class="container page-medium">
+    <div class="app-toolbar">
+      <div>
+        <h2>Contactez-nous</h2>
+        <p class="muted">Une question ou un problème ? Notre équipe est à votre écoute.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Envoyer un message</h3>
+      <form onsubmit="handleContact(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="contact-name">Nom complet</label>
+            <input type="text" id="contact-name" placeholder="Entrez votre nom" required />
+          </div>
+
+          <div class="form-group">
+            <label for="contact-email">Adresse e-mail</label>
+            <input type="email" id="contact-email" placeholder="Entrez votre adresse e-mail" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="contact-subject">Sujet du message</label>
+          <select id="contact-subject" required>
+            <option value="">Choisir un sujet</option>
+            <option value="Support chauffeur">Support chauffeur</option>
+            <option value="Partenariat mécanicien">Partenariat mécanicien</option>
+            <option value="Facturation">Facturation et paiement</option>
+            <option value="Autre">Autre demande</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="contact-message">Votre message</label>
+          <textarea id="contact-message" rows="4" placeholder="Écrivez votre message ici..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary full-width">Envoyer le message</button>
+      </form>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 <strong>MécaConnect</strong> - Tous droits réservés.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
