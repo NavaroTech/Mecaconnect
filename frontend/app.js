@@ -3,6 +3,7 @@ const API_BASE = (window.API_BASE || DEFAULT_API_BASE).replace(/\/+$/, "");
 
 function normalizeGuineaPhone(rawValue) {
   const digits = String(rawValue || "").replace(/\D/g, "");
+  if (!digits) return "";
   if (digits.startsWith("224")) {
     return "+" + digits;
   }
@@ -45,7 +46,8 @@ function bindEvents() {
   const phoneInput = document.getElementById("phone");
   if (phoneInput) {
     phoneInput.addEventListener("blur", () => {
-      phoneInput.value = normalizeGuineaPhone(phoneInput.value);
+      const normalized = normalizeGuineaPhone(phoneInput.value);
+      phoneInput.value = normalized || "+224 ";
     });
   }
 
@@ -67,7 +69,8 @@ function bindEvents() {
       setStatusBox(kycResult, "Envoi de l'inscription et du dossier KYC...");
 
       const formData = new FormData(kycForm);
-      formData.set("phone", normalizeGuineaPhone(formData.get("phone")));
+      const normalizedPhone = normalizeGuineaPhone(formData.get("phone"));
+      formData.set("phone", normalizedPhone);
 
       try {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
@@ -76,12 +79,20 @@ function bindEvents() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setStatusBox(kycResult, data.error || data.message || `Erreur HTTP ${res.status}`, "error");
+          setStatusBox(
+            kycResult,
+            data.error || data.message || `Erreur HTTP ${res.status}`,
+            "error"
+          );
           return;
         }
         setStatusBox(kycResult, JSON.stringify(data, null, 2), "success");
       } catch (err) {
-        setStatusBox(kycResult, `Erreur réseau vers ${API_BASE} : ${err.message}`, "error");
+        setStatusBox(
+          kycResult,
+          `Erreur réseau vers ${API_BASE} : ${err.message}`,
+          "error"
+        );
       }
     });
   }
@@ -93,9 +104,18 @@ function bindEvents() {
       e.preventDefault();
       setStatusBox(sessionResult, "Connexion en cours...");
 
+      const rawId = (document.getElementById("loginEmail")?.value || "").trim();
+      const password = document.getElementById("loginPassword")?.value || "";
+      const isEmail = rawId.includes("@");
+      const normalizedId = isEmail
+        ? rawId.toLowerCase()
+        : normalizeGuineaPhone(rawId);
+
       const payload = {
-        identifier: document.getElementById("loginEmail")?.value.trim(),
-        password: document.getElementById("loginPassword")?.value
+        identifier: normalizedId,
+        email: isEmail ? normalizedId : "",
+        phone: isEmail ? "" : normalizedId,
+        password
       };
 
       try {
@@ -106,15 +126,26 @@ function bindEvents() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setStatusBox(sessionResult, data.error || data.message || `Erreur HTTP ${res.status}`, "error");
+          setStatusBox(
+            sessionResult,
+            data.error || data.message || `Erreur HTTP ${res.status}`,
+            "error"
+          );
           return;
         }
         if (data.token) {
           localStorage.setItem("mecaconnect_token", data.token);
         }
+        if (data.user) {
+          localStorage.setItem("mecaconnect_user", JSON.stringify(data.user));
+        }
         setStatusBox(sessionResult, JSON.stringify(data, null, 2), "success");
       } catch (err) {
-        setStatusBox(sessionResult, `Erreur réseau vers ${API_BASE} : ${err.message}`, "error");
+        setStatusBox(
+          sessionResult,
+          `Erreur réseau vers ${API_BASE} : ${err.message}`,
+          "error"
+        );
       }
     });
   }
@@ -126,7 +157,11 @@ function bindEvents() {
       try {
         const res = await fetch(`${API_BASE}/api/health`);
         const data = await res.json();
-        setStatusBox(sessionResult, JSON.stringify(data, null, 2), res.ok ? "success" : "error");
+        setStatusBox(
+          sessionResult,
+          JSON.stringify(data, null, 2),
+          res.ok ? "success" : "error"
+        );
         checkApiHealth();
       } catch (err) {
         setStatusBox(sessionResult, `Échec du test : ${err.message}`, "error");
