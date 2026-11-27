@@ -19,8 +19,8 @@ app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@mecaconnect.gn").strip().lower()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Admin@2026")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "diallosouleymane7294@gmail.com").strip().lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Soule7294")
 SECRET_KEY = os.environ.get("SECRET_KEY", "mecaconnect-guinee-secret-key")
 app.config["SECRET_KEY"] = SECRET_KEY
 
