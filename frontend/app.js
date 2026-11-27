@@ -1,224 +1,141 @@
-// ==============================================================================
-// Configuration de l'URL de base de l'API MecaConnect Guinée
-// ==============================================================================
-const API_BASE = "https://mecaconnect-api.onrender.com";
+const DEFAULT_API_BASE = "https://mecaconnect-api.onrender.com";
+const API_BASE = (window.API_BASE || DEFAULT_API_BASE).replace(/\/+$/, "");
 
-const STORAGE_USER_KEY = "mecaconnect_user";
-const STORAGE_USER_ID_KEY = "mecaconnect_user_id";
-
-
-// ==============================================================================
-// Utilitaires session, formatage GNF et téléphone Guinée (+224)
-// ==============================================================================
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem(STORAGE_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    console.error("Erreur lecture session utilisateur :", err);
-    return null;
+function normalizeGuineaPhone(rawValue) {
+  const digits = String(rawValue || "").replace(/\D/g, "");
+  if (digits.startsWith("224")) {
+    return "+" + digits;
   }
+  return "+224" + digits;
 }
 
-function getStoredUserId() {
-  const explicitId = localStorage.getItem(STORAGE_USER_ID_KEY);
-  if (explicitId) return explicitId;
-  const user = getStoredUser();
-  return user && user.id ? String(user.id) : "";
+function formatGnf(value) {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num)) return "0 GNF";
+  return `${Math.round(num).toLocaleString("fr-FR")} GNF`;
 }
 
-function setSessionUser(user) {
-  if (!user) return;
-  localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
-  if (user.id !== undefined && user.id !== null) {
-    localStorage.setItem(STORAGE_USER_ID_KEY, String(user.id));
-  }
+function setStatusBox(element, message, type = "") {
+  if (!element) return;
+  element.textContent = message;
+  element.className = "status-box" + (type ? ` ${type}` : "");
 }
 
-function clearSessionUser() {
-  localStorage.removeItem(STORAGE_USER_KEY);
-  localStorage.removeItem(STORAGE_USER_ID_KEY);
-}
-
-function formatGNF(amount) {
-  const num = Number(amount || 0);
-  return `${num.toLocaleString("fr-FR").replace(/\u00a0|\u202f/g, " ")} GNF`;
-}
-
-function normalizePhoneGN(phone) {
-  const digitsOnly = String(phone || "").replace(/[^\d+]/g, "");
-  if (digitsOnly.startsWith("+224")) {
-    return `+224${digitsOnly.slice(4).replace(/\D/g, "")}`;
-  }
-  if (digitsOnly.startsWith("224")) {
-    return `+224${digitsOnly.slice(3).replace(/\D/g, "")}`;
-  }
-  return `+224${digitsOnly.replace(/\D/g, "")}`;
-}
-
-
-// ==============================================================================
-// Client HTTP générique vers API_BASE
-// ==============================================================================
-async function apiRequest(endpoint, options = {}) {
-  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  const url = `${API_BASE}${path}`;
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  };
-
-  const userId = getStoredUserId();
-  if (userId && !headers["X-User-Id"]) {
-    headers["X-User-Id"] = userId;
-  }
-
-  const fetchOptions = {
-    method: options.method || "GET",
-    headers,
-  };
-
-  if (options.body !== undefined) {
-    fetchOptions.body =
-      typeof options.body === "string" ? options.body : JSON.stringify(options.body);
-  }
-
-  const response = await fetch(url, fetchOptions);
-  let data = null;
-
-  try {
-    data = await response.json();
-  } catch (_) {
-    data = null;
-  }
-
-  if (!response.ok) {
-    const message =
-      (data && (data.error || data.message)) ||
-      `Erreur HTTP ${response.status} sur ${path}`;
-    const error = new Error(message);
-    error.status = response.status;
-    error.data = data;
-    throw error;
-  }
-
-  return data;
-}
-
-
-// ==============================================================================
-// Appels API MecaConnect Guinée
-// ==============================================================================
 async function checkApiHealth() {
-  return apiRequest("/api/health");
-}
+  const badge = document.getElementById("apiStatusBadge");
+  if (!badge) return;
 
-async function requestEmailOtp(email) {
-  return apiRequest("/api/auth/request-otp", {
-    method: "POST",
-    body: { email: String(email || "").trim().toLowerCase() },
-  });
-}
-
-async function registerUser(payload) {
-  const body = {
-    ...payload,
-    telephone: normalizePhoneGN(payload.telephone),
-  };
-  const data = await apiRequest("/api/auth/register", {
-    method: "POST",
-    body,
-  });
-  if (data && data.user) {
-    setSessionUser(data.user);
-  }
-  return data;
-}
-
-async function loginUser(identifiant, motDePasse) {
-  const data = await apiRequest("/api/auth/login", {
-    method: "POST",
-    body: {
-      identifiant: String(identifiant || "").trim(),
-      mot_de_passe: motDePasse,
-    },
-  });
-  if (data && data.user) {
-    setSessionUser(data.user);
-  }
-  return data;
-}
-
-async function fetchProfil() {
-  return apiRequest("/api/profil");
-}
-
-async function submitKyc({ type_document, numero_document, url_document, url_selfie }) {
-  return apiRequest("/api/kyc/soumettre", {
-    method: "POST",
-    body: {
-      type_document,
-      numero_document,
-      url_document,
-      url_selfie,
-    },
-  });
-}
-
-async function fetchMecaniciens(ville = "") {
-  const query = ville ? `?ville=${encodeURIComponent(ville.trim())}` : "";
-  return apiRequest(`/api/mecaniciens${query}`);
-}
-
-async function createIntervention({
-  type_panne,
-  description,
-  localisation,
-  montant_estime_gnf,
-  mecanicien_id = null,
-}) {
-  return apiRequest("/api/demandes", {
-    method: "POST",
-    body: {
-      type_panne,
-      description,
-      localisation,
-      montant_estime_gnf: Number(montant_estime_gnf || 75000),
-      mecanicien_id,
-    },
-  });
-}
-
-async function fetchInterventions() {
-  return apiRequest("/api/demandes");
-}
-
-async function createPaymentGnf({ demande_id = null, montant_gnf, operateur, numero_telephone }) {
-  return apiRequest("/api/paiements", {
-    method: "POST",
-    body: {
-      demande_id,
-      montant_gnf: Number(montant_gnf),
-      operateur: operateur || "Orange Money",
-      numero_telephone: normalizePhoneGN(numero_telephone),
-    },
-  });
-}
-
-async function fetchNotifications() {
-  return apiRequest("/api/notifications");
-}
-
-
-// ==============================================================================
-// Vérification automatique au chargement de la page
-// ==============================================================================
-document.addEventListener("DOMContentLoaded", async () => {
   try {
-    const health = await checkApiHealth();
-    console.info("MecaConnect API connectée :", health);
+    const res = await fetch(`${API_BASE}/api/health`, { method: "GET" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.database === "connected") {
+      badge.textContent = "API & Base connectées";
+      badge.className = "api-badge ok";
+    } else {
+      badge.textContent = "API active (BDD à vérifier)";
+      badge.className = "api-badge err";
+    }
   } catch (err) {
-    console.warn("API indisponible ou en cours de réveil :", err.message);
+    badge.textContent = "API en veille ou inaccessible";
+    badge.className = "api-badge err";
   }
+}
+
+function bindEvents() {
+  const phoneInput = document.getElementById("phone");
+  if (phoneInput) {
+    phoneInput.addEventListener("blur", () => {
+      phoneInput.value = normalizeGuineaPhone(phoneInput.value);
+    });
+  }
+
+  const amountInput = document.getElementById("amountGnf");
+  const formattedGnf = document.getElementById("formattedGnf");
+  if (amountInput && formattedGnf) {
+    const updateGnfDisplay = () => {
+      formattedGnf.textContent = `Montant formaté : ${formatGnf(amountInput.value)}`;
+    };
+    amountInput.addEventListener("input", updateGnfDisplay);
+    updateGnfDisplay();
+  }
+
+  const kycForm = document.getElementById("kycForm");
+  const kycResult = document.getElementById("kycResult");
+  if (kycForm) {
+    kycForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setStatusBox(kycResult, "Envoi de l'inscription et du dossier KYC...");
+
+      const formData = new FormData(kycForm);
+      formData.set("phone", normalizeGuineaPhone(formData.get("phone")));
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setStatusBox(kycResult, data.error || data.message || `Erreur HTTP ${res.status}`, "error");
+          return;
+        }
+        setStatusBox(kycResult, JSON.stringify(data, null, 2), "success");
+      } catch (err) {
+        setStatusBox(kycResult, `Erreur réseau vers ${API_BASE} : ${err.message}`, "error");
+      }
+    });
+  }
+
+  const loginForm = document.getElementById("loginForm");
+  const sessionResult = document.getElementById("sessionResult");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setStatusBox(sessionResult, "Connexion en cours...");
+
+      const payload = {
+        identifier: document.getElementById("loginEmail")?.value.trim(),
+        password: document.getElementById("loginPassword")?.value
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setStatusBox(sessionResult, data.error || data.message || `Erreur HTTP ${res.status}`, "error");
+          return;
+        }
+        if (data.token) {
+          localStorage.setItem("mecaconnect_token", data.token);
+        }
+        setStatusBox(sessionResult, JSON.stringify(data, null, 2), "success");
+      } catch (err) {
+        setStatusBox(sessionResult, `Erreur réseau vers ${API_BASE} : ${err.message}`, "error");
+      }
+    });
+  }
+
+  const pingBtn = document.getElementById("pingApiBtn");
+  if (pingBtn) {
+    pingBtn.addEventListener("click", async () => {
+      setStatusBox(sessionResult, `Test de ${API_BASE}/api/health...`);
+      try {
+        const res = await fetch(`${API_BASE}/api/health`);
+        const data = await res.json();
+        setStatusBox(sessionResult, JSON.stringify(data, null, 2), res.ok ? "success" : "error");
+        checkApiHealth();
+      } catch (err) {
+        setStatusBox(sessionResult, `Échec du test : ${err.message}`, "error");
+      }
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  bindEvents();
+  checkApiHealth();
 });
