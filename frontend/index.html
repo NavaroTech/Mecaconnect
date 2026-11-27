@@ -6,256 +6,395 @@
   <title>Inscription &amp; Vérification KYC — MecaConnect Guinée</title>
   <style>
     :root {
-      --bg: #f4f6f9;
-      --card: #ffffff;
+      --bg-page: #f3f5f7;
+      --bg-card: #ffffff;
+      --border-color: #d6dde3;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
       --primary: #0f766e;
-      --primary-hover: #115e59;
-      --accent: #eab308;
-      --text: #0f172a;
-      --muted: #475569;
-      --border: #cbd5e1;
-      --danger: #b91c1c;
-      --success: #15803d;
+      --primary-hover: #0d625b;
+      --secondary: #334155;
+      --secondary-hover: #1e293b;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --error-text: #b91c1c;
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+      --success-text: #065f46;
+      --info-bg: #f8fafc;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      padding: 24px 16px;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      padding: 24px;
     }
 
     .container {
-      max-width: 960px;
+      max-width: 1120px;
       margin: 0 auto;
-    }
-
-    .topbar {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 20px;
-    }
-
-    .brand h1 {
-      font-size: 1.35rem;
-      color: var(--primary);
-    }
-
-    .brand p {
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    .api-badge {
-      font-size: 0.85rem;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: #e2e8f0;
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .api-badge.ok {
-      background: #dcfce7;
-      color: var(--success);
-    }
-
-    .api-badge.err {
-      background: #fee2e2;
-      color: var(--danger);
-    }
-
-    .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 20px;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 820px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
     }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 20px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
-    .card h2 {
-      font-size: 1.1rem;
-      margin-bottom: 12px;
-      color: var(--text);
-    }
-
-    .field {
-      margin-bottom: 14px;
+    .form-group {
+      margin-bottom: 16px;
     }
 
     label {
       display: block;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       font-weight: 600;
       margin-bottom: 6px;
+      color: var(--text-main);
     }
 
-    input, select, textarea {
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    select {
       width: 100%;
       padding: 10px 12px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       font-size: 0.95rem;
+      color: var(--text-main);
+      background-color: #fff;
+      transition: border-color 0.15s ease;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .file-box {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
       background: #fff;
-      color: var(--text);
     }
 
-    input:focus, select:focus, textarea:focus {
-      outline: 2px solid var(--primary);
-      outline-offset: 1px;
-    }
-
-    .hint {
+    .helper-text {
+      display: block;
+      margin-top: 5px;
       font-size: 0.8rem;
-      color: var(--muted);
-      margin-top: 4px;
+      color: var(--text-muted);
     }
 
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       width: 100%;
       padding: 11px 16px;
       border: none;
       border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
       font-size: 0.95rem;
       font-weight: 600;
+      color: #ffffff;
       cursor: pointer;
+      transition: background-color 0.15s ease;
     }
 
-    .btn:hover {
-      background: var(--primary-hover);
+    .btn-primary {
+      background-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
     }
 
     .btn-secondary {
-      background: #334155;
-      margin-top: 8px;
+      background-color: var(--secondary);
+      margin-top: 10px;
     }
 
     .btn-secondary:hover {
-      background: #1e293b;
+      background-color: var(--secondary-hover);
     }
 
     .status-box {
-      margin-top: 14px;
-      padding: 12px;
+      margin-top: 16px;
+      padding: 12px 14px;
       border-radius: 8px;
       font-size: 0.9rem;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      white-space: pre-wrap;
-      word-break: break-word;
+      border: 1px solid var(--border-color);
+      background-color: var(--info-bg);
+      color: var(--text-main);
     }
 
     .status-box.error {
-      background: #fef2f2;
-      border-color: #fecaca;
-      color: var(--danger);
+      background-color: var(--error-bg);
+      border-color: var(--error-border);
+      color: var(--error-text);
     }
 
     .status-box.success {
-      background: #f0fdf4;
-      border-color: #bbf7d0;
-      color: var(--success);
+      background-color: var(--success-bg);
+      border-color: var(--success-border);
+      color: var(--success-text);
+    }
+
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header class="topbar">
-      <div class="brand">
-        <h1>MecaConnect Guinée</h1>
-        <p>Inscription, Vérification KYC &amp; Services Mécaniques (GNF / +224)</p>
-      </div>
-      <div id="apiStatusBadge" class="api-badge">Vérification API...</div>
-    </header>
 
-    <main class="grid">
-      <section class="card">
-        <h2>Inscription &amp; Vérification KYC</h2>
-        <form id="kycForm">
-          <div class="field">
-            <label for="fullName">Nom complet</label>
-            <input id="fullName" name="full_name" type="text" placeholder="Ex. Mamadou Bah" required />
-          </div>
-
-          <div class="field">
-            <label for="phone">Téléphone Guinée (+224)</label>
-            <input id="phone" name="phone" type="tel" value="+224 " placeholder="+224 620 00 00 00" required />
-            <div class="hint">Format guinéen : +224 suivi de 8 ou 9 chiffres.</div>
-          </div>
-
-          <div class="field">
-            <label for="role">Profil</label>
-            <select id="role" name="role">
-              <option value="client">Client / Conducteur</option>
-              <option value="mechanic">Mécanicien / Garage</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="idNumber">Numéro de pièce d'identité (unique par compte)</label>
-            <input id="idNumber" name="id_number" type="text" placeholder="CNI / Passeport / Permis" required />
-          </div>
-
-          <div class="field">
-            <label for="selfieFile">Photo selfie de vérification KYC</label>
-            <input id="selfieFile" name="selfie" type="file" accept="image/*" required />
-          </div>
-
-          <button type="submit" class="btn">Valider l'inscription &amp; le KYC</button>
-        </form>
-        <div id="kycResult" class="status-box">En attente de soumission.</div>
-      </section>
-
-      <section class="card">
-        <h2>Connexion &amp; Estimation / Demande (GNF)</h2>
-        <form id="loginForm">
-          <div class="field">
-            <label for="loginEmail">Email ou téléphone</label>
-            <input id="loginEmail" name="identifier" type="text" placeholder="admin@mecaconnect.gn ou +224..." required />
-          </div>
-          <div class="field">
-            <label for="loginPassword">Mot de passe</label>
-            <input id="loginPassword" name="password" type="password" placeholder="••••••••" required />
-          </div>
-          <button type="submit" class="btn">Se connecter</button>
-          <button type="button" id="pingApiBtn" class="btn btn-secondary">Tester la connexion API &amp; Base</button>
-        </form>
-
-        <div class="field" style="margin-top: 18px;">
-          <label for="amountGnf">Montant estimé / prestation (GNF)</label>
-          <input id="amountGnf" type="number" step="1000" min="1000" value="150000" />
-          <div id="formattedGnf" class="hint">Montant formaté : 150 000 GNF</div>
+  <main class="container">
+    <!-- COLONNE GAUCHE : INSCRIPTION & KYC -->
+    <section class="card">
+      <form id="kycForm" novalidate>
+        <div class="form-group">
+          <label for="fullName">Nom complet</label>
+          <input type="text" id="fullName" name="fullName" placeholder="Ex. Mamadou Bah" required />
         </div>
 
-        <div id="sessionResult" class="status-box">Prêt.</div>
-      </section>
-    </main>
-  </div>
+        <div class="form-group">
+          <label for="phone">Téléphone Guinée (+224)</label>
+          <input type="text" id="phone" name="phone" value="+224" placeholder="+224620000000" required />
+          <span class="helper-text">Format guinéen : +224 suivi de 8 ou 9 chiffres.</span>
+        </div>
 
-  <script src="./app.js"></script>
+        <div class="form-group">
+          <label for="role">Profil</label>
+          <select id="role" name="role">
+            <option value="client">Client / Conducteur</option>
+            <option value="mecanicien">Mécanicien / Garage</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="idNumber">Numéro de pièce d'identité (unique par compte)</label>
+          <input type="text" id="idNumber" name="idNumber" placeholder="CNI / Passeport / Permis" required />
+        </div>
+
+        <div class="form-group">
+          <label for="kycSelfie">Photo selfie de vérification KYC</label>
+          <div class="file-box">
+            <input type="file" id="kycSelfie" name="kycSelfie" accept="image/*" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Valider l'inscription &amp; le KYC</button>
+
+        <div id="kycStatus" class="status-box">
+          En attente de soumission.
+        </div>
+      </form>
+    </section>
+
+    <!-- COLONNE DROITE : CONNEXION & OUTILS -->
+    <section class="card">
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label for="loginIdentifier">Email ou téléphone</label>
+          <input
+            type="text"
+            id="loginIdentifier"
+            name="loginIdentifier"
+            autocomplete="username"
+            placeholder="exemple@domaine.com ou +224..."
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">Mot de passe</label>
+          <input
+            type="password"
+            id="loginPassword"
+            name="loginPassword"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        <button type="submit" id="btnLogin" class="btn btn-primary">Se connecter</button>
+        <button type="button" id="btnTestApi" class="btn btn-secondary">Tester la connexion API &amp; Base</button>
+      </form>
+
+      <div class="form-group" style="margin-top: 20px;">
+        <label for="amountGnf">Montant estimé / prestation (GNF)</label>
+        <input type="number" id="amountGnf" name="amountGnf" value="150000" min="0" step="1000" />
+        <span id="formattedAmount" class="helper-text">Montant formaté : 150 000 GNF</span>
+      </div>
+
+      <div id="loginStatus" class="status-box hidden"></div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE_URL = "http://localhost:3000/api"; // À adapter selon ton backend
+
+    // --- 1. GESTION DE LA CONNEXION (CORRIGÉE) ---
+    const loginForm = document.getElementById("loginForm");
+    const loginIdentifierInput = document.getElementById("loginIdentifier");
+    const loginPasswordInput = document.getElementById("loginPassword");
+    const loginStatus = document.getElementById("loginStatus");
+
+    function showStatus(element, message, type = "info") {
+      element.textContent = message;
+      element.className = `status-box ${type}`;
+    }
+
+    function isValidIdentifier(value) {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      const isGuineaPhone = /^\+224\s?\d{8,9}$/.test(value.replace(/\s+/g, ""));
+      return isEmail || isGuineaPhone;
+    }
+
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault(); // Empêche le rechargement et la perte des champs
+
+      // Lecture directe de .value au moment du clic (gère l'autocomplétion Edge)
+      const identifier = loginIdentifierInput.value.trim();
+      const password = loginPasswordInput.value;
+
+      if (!identifier || !password) {
+        showStatus(
+          loginStatus,
+          "Identifiant (e-mail ou téléphone +224) et mot de passe requis.",
+          "error"
+        );
+        return;
+      }
+
+      if (!isValidIdentifier(identifier)) {
+        showStatus(
+          loginStatus,
+          "Format invalide : saisissez un e-mail valide ou un numéro +224 (8 ou 9 chiffres).",
+          "error"
+        );
+        return;
+      }
+
+      showStatus(loginStatus, "Connexion en cours...", "info");
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Échec de l'authentification.");
+        }
+
+        showStatus(loginStatus, "Connexion réussie ! Redirection...", "success");
+      } catch (err) {
+        showStatus(
+          loginStatus,
+          `Erreur réseau ou serveur : ${err.message}`,
+          "error"
+        );
+      }
+    });
+
+    // --- 2. TEST CONNEXION API & BASE ---
+    document.getElementById("btnTestApi").addEventListener("click", async () => {
+      showStatus(loginStatus, "Test de connexion à l'API en cours...", "info");
+      try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        if (!response.ok) throw new Error(`Statut HTTP ${response.status}`);
+        showStatus(loginStatus, "API et base de données opérationnelles.", "success");
+      } catch (err) {
+        showStatus(
+          loginStatus,
+          `Impossible de joindre le serveur (${API_BASE_URL}) : ${err.message}`,
+          "error"
+        );
+      }
+    });
+
+    // --- 3. FORMATAGE DYNAMIQUE DU MONTANT EN GNF ---
+    const amountInput = document.getElementById("amountGnf");
+    const formattedAmount = document.getElementById("formattedAmount");
+
+    function updateFormattedAmount() {
+      const rawValue = Number(amountInput.value);
+      if (isNaN(rawValue) || rawValue < 0) {
+        formattedAmount.textContent = "Montant formaté : 0 GNF";
+        return;
+      }
+      const formatted = new Intl.NumberFormat("fr-FR").format(rawValue);
+      formattedAmount.textContent = `Montant formaté : ${formatted} GNF`;
+    }
+
+    amountInput.addEventListener("input", updateFormattedAmount);
+
+    // --- 4. GESTION DU FORMULAIRE D'INSCRIPTION & KYC ---
+    const kycForm = document.getElementById("kycForm");
+    const kycStatus = document.getElementById("kycStatus");
+
+    kycForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const fullName = document.getElementById("fullName").value.trim();
+      const phone = document.getElementById("phone").value.trim().replace(/\s+/g, "");
+      const role = document.getElementById("role").value;
+      const idNumber = document.getElementById("idNumber").value.trim();
+      const selfieFile = document.getElementById("kycSelfie").files[0];
+
+      if (!fullName || !/^\+224\d{8,9}$/.test(phone) || !idNumber || !selfieFile) {
+        showStatus(
+          kycStatus,
+          "Veuillez remplir tous les champs (téléphone +224 à 8 ou 9 chiffres) et joindre le selfie KYC.",
+          "error"
+        );
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("fullName", fullName);
+      formData.append("phone", phone);
+      formData.append("role", role);
+      formData.append("idNumber", idNumber);
+      formData.append("kycSelfie", selfieFile);
+
+      showStatus(kycStatus, "Envoi du dossier KYC en cours...", "info");
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/register-kyc`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Erreur lors de l'inscription.");
+
+        showStatus(kycStatus, "Inscription et dossier KYC envoyés avec succès !", "success");
+      } catch (err) {
+        showStatus(kycStatus, `Erreur lors de la soumission : ${err.message}`, "error");
+      }
+    });
+  </script>
 </body>
 </html>
