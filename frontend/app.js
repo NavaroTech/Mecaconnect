@@ -7,15 +7,13 @@
 
   const STORAGE_USER_KEY = "mecaconnect_user";
   const STORAGE_TOKEN_KEY = "mecaconnect_token";
-  const STORAGE_INTERVENTIONS_KEY = "mecaconnect_interventions";
-  const STORAGE_PAYMENTS_KEY = "mecaconnect_payments";
-  const STORAGE_NOTIFICATIONS_KEY = "mecaconnect_notifications";
 
-  const PUBLIC_PAGES = new Set(["index.html", "connexion.html", "inscription.html", ""]);
   const PROTECTED_PAGES = new Set([
     "chauffeur.html",
     "mecanicien.html",
+    "demande.html",
     "paiement.html",
+    "notifications.html",
     "profil.html",
     "admin.html"
   ]);
@@ -95,7 +93,7 @@
     if (digits.length === 9 && digits.startsWith("6")) {
       return `+224${digits}`;
     }
-    return phone.trim();
+    return String(phone || "").trim();
   }
 
   function isValidGuineaPhone(phone) {
@@ -149,8 +147,12 @@
     const el = typeof target === "string" ? document.getElementById(target) : target;
     if (!el) return;
     el.textContent = text || "";
-    el.style.display = text ? "block" : "none";
-    el.classList.remove("status-success", "status-error", "status-info");
+    el.classList.remove("hidden", "status-success", "status-error", "status-info");
+    if (!text) {
+      el.classList.add("hidden");
+      return;
+    }
+    el.style.display = "block";
     if (type === "success") {
       el.style.color = "#15803d";
       el.classList.add("status-success");
@@ -167,11 +169,16 @@
     const user = getStoredUser();
     const loggedIn = isAuthenticated();
 
-    // Mise à jour du message de bienvenue dans l'en-tête
-    const greetingTargets = document.querySelectorAll(
-      "#userGreeting, .user-greeting, [data-user-greeting]"
-    );
-    greetingTargets.forEach((el) => {
+    document.querySelectorAll("[data-user-name]").forEach((el) => {
+      if (loggedIn && user) {
+        el.textContent = user.nom || user.full_name || user.email || "Membre";
+      } else {
+        el.textContent = "Invité";
+      }
+    });
+
+    document.querySelectorAll("#userGreeting, .user-greeting, [data-user-greeting]").forEach((el) => {
+      if (el.querySelector("[data-user-name]")) return;
       if (loggedIn && user) {
         const displayName = user.nom || user.full_name || user.email || "Membre";
         el.innerHTML = `Bonjour, <strong>${escapeHtml(displayName)}</strong>`;
@@ -180,7 +187,7 @@
       }
     });
 
-    // Masquer les liens privés dans le menu latéral et les barres de navigation si déconnecté
+    // Masquer les liens privés si l'utilisateur n'est pas connecté
     document.querySelectorAll("a[href]").forEach((link) => {
       const href = (link.getAttribute("href") || "").split("?")[0].toLowerCase();
       if (!PROTECTED_PAGES.has(href)) return;
@@ -195,36 +202,57 @@
       }
     });
 
-    // Gestion des boutons Créer un compte / Déconnexion
-    document.querySelectorAll("[data-auth-only]").forEach((el) => {
-      el.style.display = loggedIn ? "" : "none";
-    });
-    document.querySelectorAll("[data-guest-only]").forEach((el) => {
+    document.querySelectorAll(".auth-guest-only, [data-guest-only]").forEach((el) => {
       el.style.display = loggedIn ? "none" : "";
     });
 
-    const headerActions = document.querySelector(".header-actions, .top-actions, header");
-    if (loggedIn && headerActions && !document.getElementById("globalLogoutBtn")) {
-      const signupLinks = headerActions.querySelectorAll('a[href*="inscription.html"]');
-      signupLinks.forEach((a) => {
-        a.style.display = "none";
-      });
+    document.querySelectorAll("[data-auth-only], .btn-logout, [data-auth-logout]").forEach((el) => {
+      el.style.display = loggedIn ? "" : "none";
+    });
 
-      const logoutBtn = document.createElement("button");
-      logoutBtn.id = "globalLogoutBtn";
-      logoutBtn.type = "button";
-      logoutBtn.className = "btn btn-secondary";
-      logoutBtn.style.marginLeft = "8px";
-      logoutBtn.textContent = "Déconnexion";
-      logoutBtn.addEventListener("click", () => {
+    document.querySelectorAll("#logoutBtn, [data-auth-logout]").forEach((btn) => {
+      if (btn.dataset.logoutBound) return;
+      btn.dataset.logoutBound = "1";
+      btn.addEventListener("click", () => {
         clearSession();
         window.location.href = "connexion.html";
       });
-      headerActions.appendChild(logoutBtn);
+    });
+  }
+
+  async function initApiHealthCheck() {
+    const badge = document.getElementById("apiStatusBadge");
+    const testBtn = document.getElementById("btnTestApi");
+    const statusBox = document.getElementById("loginStatus");
+
+    const runCheck = async (showDetails = false) => {
+      if (badge) badge.textContent = "Vérification API...";
+      try {
+        const data = await apiRequest("/health");
+        if (badge) badge.textContent = "API & Base OK";
+        if (showDetails && statusBox) {
+          setStatusMessage(
+            statusBox,
+            `Connexion API réussie (${API_BASE}) — Base : ${data.database || "connectée"}.`,
+            "success"
+          );
+        }
+      } catch (err) {
+        if (badge) badge.textContent = "API hors ligne";
+        if (showDetails && statusBox) {
+          setStatusMessage(statusBox, `Erreur API : ${err.message}`, "error");
+        }
+      }
+    };
+
+    if (testBtn) {
+      testBtn.addEventListener("click", () => runCheck(true));
+    }
+    if (badge) {
+      runCheck(false);
     }
   }
 
-  // Formatage dynamique du montant GNF (accueil & paiement)
   function initAmountFormatter() {
     const amountInput = document.getElementById("amountGnf") || document.getElementById("montantGnf");
     const formattedSpan =
@@ -238,7 +266,6 @@
     refresh();
   }
 
-  // Page de connexion (connexion.html)
   function initLoginPage() {
     const form =
       document.getElementById("loginForm") ||
@@ -307,7 +334,6 @@
     });
   }
 
-  // Page d'inscription KYC + Double OTP (E-mail & SMS +224) + Caméra Selfie
   function initRegisterPage() {
     const form =
       document.getElementById("registerForm") ||
@@ -433,7 +459,6 @@
       });
     }
 
-    // Gestion caméra selfie KYC en direct
     const startCameraBtn = document.getElementById("startCameraBtn");
     const captureSelfieBtn = document.getElementById("captureSelfieBtn");
     const videoEl = document.getElementById("kycVideo");
@@ -551,7 +576,6 @@
     });
   }
 
-  // Page profil (profil.html)
   function initProfilePage() {
     if (getCurrentPage() !== "profil.html") return;
     const user = getStoredUser();
@@ -578,9 +602,8 @@
     }
   }
 
-  // Page chauffeur (chauffeur.html)
   function initDriverPage() {
-    if (getCurrentPage() !== "chauffeur.html") return;
+    if (!["chauffeur.html", "demande.html"].includes(getCurrentPage())) return;
     const form = document.getElementById("breakdownForm") || document.querySelector("form");
     const listContainer = document.getElementById("driverRequestsList");
     const user = getStoredUser();
@@ -648,7 +671,6 @@
     loadDriverRequests();
   }
 
-  // Page mécanicien (mecanicien.html)
   function initMechanicPage() {
     if (getCurrentPage() !== "mecanicien.html") return;
     const container = document.getElementById("mechanicMissionsList") || document.querySelector(".missions-list");
@@ -705,7 +727,6 @@
     loadMissions();
   }
 
-  // Page paiement GNF (paiement.html)
   function initPaymentPage() {
     if (getCurrentPage() !== "paiement.html") return;
     const form = document.getElementById("paymentForm") || document.querySelector("form");
@@ -781,7 +802,6 @@
     loadPayments();
   }
 
-  // Page administration (admin.html)
   async function initAdminPage() {
     if (getCurrentPage() !== "admin.html") return;
     const statusBox = document.getElementById("adminStatus");
@@ -860,6 +880,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     updateNavigationUI();
+    initApiHealthCheck();
     initAmountFormatter();
     initLoginPage();
     initRegisterPage();
