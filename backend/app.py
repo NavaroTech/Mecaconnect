@@ -2,6 +2,10 @@ import os
 import re
 import uuid
 import random
+import hashlib
+import hmac
+import base64
+import json
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
@@ -57,6 +61,8 @@ def init_db():
         mot_de_passe_hash TEXT NOT NULL,
         role VARCHAR(30) NOT NULL DEFAULT 'client',
         statut_kyc VARCHAR(30) NOT NULL DEFAULT 'en_attente',
+        email_verifie BOOLEAN NOT NULL DEFAULT FALSE,
+        telephone_verifie BOOLEAN NOT NULL DEFAULT FALSE,
         ville VARCHAR(100) DEFAULT 'Conakry',
         quartier VARCHAR(120),
         specialite VARCHAR(120),
@@ -65,9 +71,21 @@ def init_db():
         cree_le TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS email_verifie BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS telephone_verifie BOOLEAN NOT NULL DEFAULT FALSE;
+
     CREATE TABLE IF NOT EXISTS email_otps (
         id SERIAL PRIMARY KEY,
         email VARCHAR(150) NOT NULL,
+        code_otp VARCHAR(10) NOT NULL,
+        expire_le TIMESTAMPTZ NOT NULL,
+        utilise BOOLEAN NOT NULL DEFAULT FALSE,
+        cree_le TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS sms_otps (
+        id SERIAL PRIMARY KEY,
+        telephone VARCHAR(30) NOT NULL,
         code_otp VARCHAR(10) NOT NULL,
         expire_le TIMESTAMPTZ NOT NULL,
         utilise BOOLEAN NOT NULL DEFAULT FALSE,
@@ -130,9 +148,10 @@ def init_db():
             cur.execute(
                 """
                 INSERT INTO utilisateurs (
-                    nom_complet, email, telephone, mot_de_passe_hash, role, statut_kyc, ville
+                    nom_complet, email, telephone, mot_de_passe_hash, role,
+                    statut_kyc, email_verifie, telephone_verifie, ville
                 )
-                VALUES (%s, %s, %s, %s, 'admin', 'verifie', 'Conakry')
+                VALUES (%s, %s, %s, %s, 'admin', 'verifie', TRUE, TRUE, 'Conakry')
                 ON CONFLICT (email) DO NOTHING;
                 """,
                 (
@@ -154,7 +173,7 @@ except Exception as exc:
 
 
 # ==============================================================================
-# Utilitaires (Téléphone Guinée +224, GNF, authentification simple)
+# Utilitaires (Téléphone Guinée +224, GNF, Jeton & Authentification)
 # ==============================================================================
 def normaliser_telephone_gn(telephone: str) -> str:
     """Normalise un numéro guinéen vers le format +224XXXXXXXXX."""
@@ -166,7 +185,7 @@ def normaliser_telephone_gn(telephone: str) -> str:
         digits = re.sub(r"\D", "", cleaned[3:])
         return f"+224{digits}"
     digits = re.sub(r"\D", "", cleaned)
-    return f"+224{digits}"
+    return f"+224{digits}" if digits else ""
 
 
 def formater_gnf(montant: int) -> str:
@@ -174,14 +193,61 @@ def formater_gnf(montant: int) -> str:
     return f"{int(montant):,} GNF".replace(",", " ")
 
 
-def get_current_user():
-    """Récupère l'utilisateur via l'en-tête X-User-Id (à remplacer par JWT/session en prod)."""
-    user_id = request.headers.get("X-User-Id")
-    if not user_id:
+def generer_token_session(user_id: int, role: str) -> str:
+    """Génère un jeton signé HMAC (valide 7 jours)."""
+    exp = int((datetime.now(timezone.utc) + timedelta(days=7)).timestamp())
+    payload = json.dumps({"uid": int(user_id), "role": role, "exp": exp}, separators=(",", ":")).encode("utf-8")
+    payload_b64 = base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
+    sig = hmac.new(SECRET_KEY.encode("utf-8"), payload_b64.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{payload_b64}.{sig}"
+
+
+def verifier_token_session(token: str):
+    """Vérifie la signature et l'expiration du jeton et retourne l'user_id ou None."""
+    if not token or "." not in token:
         return None
     try:
-        uid = int(user_id)
-    except ValueError:
+        payload_b64, sig = token.split(".", 1)
+        expected_sig = hmac.new(SECRET_KEY.encode("utf-8"), payload_b64.encode("utf-8"), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected_sig):
+            return None
+        padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+        data = json.loads(base64.urlsafe_b64decode(padded.encode("utf-8")).decode("utf-8"))
+        if int(data.get("exp", 0)) < int(datetime.now(timezone.utc).timestamp()):
+            return None
+        return int(data["uid"])
+    except Exception:
+        return None
+
+
+def get_payload_any():
+    """Récupère les données envoyées en JSON ou en FormData."""
+    data = request.get_json(silent=True)
+    if isinstance(data, dict) and data:
+        return data
+    if request.form:
+        return request.form.to_dict()
+    return {}
+
+
+def get_current_user():
+    """Récupère l'utilisateur via Authorization: Bearer <token> ou X-User-Id."""
+    uid = None
+
+    auth_header = request.headers.get("Authorization", "").strip()
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
+        uid = verifier_token_session(token)
+
+    if uid is None:
+        raw_uid = request.headers.get("X-User-Id")
+        if raw_uid:
+            try:
+                uid = int(raw_uid)
+            except ValueError:
+                uid = None
+
+    if not uid:
         return None
 
     conn = get_db_connection()
@@ -190,7 +256,8 @@ def get_current_user():
             cur.execute(
                 """
                 SELECT id, nom_complet, email, telephone, role, statut_kyc,
-                       ville, quartier, specialite, tarif_base_gnf, actif, cree_le
+                       email_verifie, telephone_verifie, ville, quartier,
+                       specialite, tarif_base_gnf, actif, cree_le
                 FROM utilisateurs
                 WHERE id = %s AND actif = TRUE
                 """,
@@ -206,7 +273,7 @@ def auth_required(fn):
     def wrapper(*args, **kwargs):
         user = get_current_user()
         if not user:
-            return jsonify({"error": "Authentification requise (X-User-Id manquant ou invalide)."}), 401
+            return jsonify({"error": "Authentification requise."}), 401
         return fn(user, *args, **kwargs)
 
     return wrapper
@@ -266,13 +333,13 @@ def health():
 
 
 # ==============================================================================
-# Authentification & OTP Email
+# Authentification & Vérification OTP (Email + SMS +224)
 # ==============================================================================
 @app.post("/api/auth/request-otp")
 def request_otp():
-    data = request.get_json(silent=True) or {}
+    data = get_payload_any()
     email = (data.get("email") or "").strip().lower()
-    if not email or "@" not in email:
+    if not email or not re.fullmatch(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email):
         return jsonify({"error": "Adresse e-mail valide requise."}), 400
 
     code_otp = f"{random.randint(100000, 999999)}"
@@ -292,10 +359,9 @@ def request_otp():
     finally:
         conn.close()
 
-    # En production, branchez ici un fournisseur d'e-mail (SMTP / Resend / Brevo)
     return jsonify(
         {
-            "message": "Code OTP généré.",
+            "message": "Code OTP e-mail généré.",
             "email": email,
             "otp_code": code_otp,
             "expires_in_minutes": 15,
@@ -303,31 +369,158 @@ def request_otp():
     ), 200
 
 
+@app.post("/api/auth/verify-email-otp")
+def verify_email_otp():
+    data = get_payload_any()
+    email = (data.get("email") or "").strip().lower()
+    code_otp = (data.get("code_otp") or data.get("code") or "").strip()
+
+    if not email or not code_otp:
+        return jsonify({"error": "Adresse e-mail et code OTP requis."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, expire_le, utilise
+                FROM email_otps
+                WHERE LOWER(email) = %s AND code_otp = %s
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (email, code_otp),
+            )
+            row = cur.fetchone()
+            if not row or row["utilise"]:
+                return jsonify({"error": "Code e-mail invalide ou déjà utilisé."}), 400
+            if row["expire_le"] < datetime.now(timezone.utc):
+                return jsonify({"error": "Ce code e-mail a expiré."}), 400
+
+            cur.execute("UPDATE email_otps SET utilise = TRUE WHERE id = %s", (row["id"],))
+            cur.execute("UPDATE utilisateurs SET email_verifie = TRUE WHERE LOWER(email) = %s", (email,))
+        conn.commit()
+        return jsonify({"message": "Adresse e-mail vérifiée avec succès.", "verified": True}), 200
+    finally:
+        conn.close()
+
+
+@app.post("/api/auth/request-sms-otp")
+def request_sms_otp():
+    data = get_payload_any()
+    telephone = normaliser_telephone_gn(data.get("telephone") or data.get("phone") or "")
+
+    if not re.fullmatch(r"\+224\d{8,9}", telephone):
+        return jsonify(
+            {"error": "Numéro de téléphone guinéen invalide (format attendu : +224 suivi de 8 ou 9 chiffres)."}
+        ), 400
+
+    code_otp = f"{random.randint(100000, 999999)}"
+    expire_le = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO sms_otps (telephone, code_otp, expire_le)
+                VALUES (%s, %s, %s)
+                """,
+                (telephone, code_otp, expire_le),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Branchez ici votre passerelle SMS Guinée / internationale en production
+    return jsonify(
+        {
+            "message": "Code SMS généré.",
+            "telephone": telephone,
+            "otp_code": code_otp,
+            "expires_in_minutes": 10,
+        }
+    ), 200
+
+
+@app.post("/api/auth/verify-sms-otp")
+def verify_sms_otp():
+    data = get_payload_any()
+    telephone = normaliser_telephone_gn(data.get("telephone") or data.get("phone") or "")
+    code_otp = (data.get("code_otp") or data.get("code") or "").strip()
+
+    if not re.fullmatch(r"\+224\d{8,9}", telephone) or not code_otp:
+        return jsonify({"error": "Numéro +224 et code SMS requis."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, expire_le, utilise
+                FROM sms_otps
+                WHERE telephone = %s AND code_otp = %s
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (telephone, code_otp),
+            )
+            row = cur.fetchone()
+            if not row or row["utilise"]:
+                return jsonify({"error": "Code SMS invalide ou déjà utilisé."}), 400
+            if row["expire_le"] < datetime.now(timezone.utc):
+                return jsonify({"error": "Ce code SMS a expiré."}), 400
+
+            cur.execute("UPDATE sms_otps SET utilise = TRUE WHERE id = %s", (row["id"],))
+            cur.execute("UPDATE utilisateurs SET telephone_verifie = TRUE WHERE telephone = %s", (telephone,))
+        conn.commit()
+        return jsonify({"message": "Numéro de téléphone vérifié avec succès.", "verified": True}), 200
+    finally:
+        conn.close()
+
+
 @app.post("/api/auth/register")
 def register():
-    data = request.get_json(silent=True) or {}
-    nom_complet = (data.get("nom_complet") or "").strip()
+    data = get_payload_any()
+    nom_complet = (data.get("nom_complet") or data.get("fullName") or data.get("full_name") or "").strip()
     email = (data.get("email") or "").strip().lower()
-    telephone = normaliser_telephone_gn(data.get("telephone") or "")
-    mot_de_passe = data.get("mot_de_passe") or ""
+    telephone = normaliser_telephone_gn(data.get("telephone") or data.get("phone") or "")
+    mot_de_passe = data.get("mot_de_passe") or data.get("password") or ""
     role = (data.get("role") or "client").strip().lower()
     ville = (data.get("ville") or "Conakry").strip()
     quartier = (data.get("quartier") or "").strip()
-    specialite = (data.get("specialite") or "").strip()
+    specialite = (data.get("specialite") or data.get("ref_atelier") or "").strip()
     tarif_base_gnf = int(data.get("tarif_base_gnf") or 50000)
 
-    if role not in ("client", "mecanicien"):
+    email_verifie = str(data.get("email_verifie") or "").lower() in ("true", "1", "yes")
+    telephone_verifie = str(data.get("telephone_verifie") or "").lower() in ("true", "1", "yes")
+
+    if role == "chauffeur":
+        role = "client"
+    elif role not in ("client", "mecanicien"):
         role = "client"
 
-    if not nom_complet or not email or not telephone or len(mot_de_passe) < 6:
+    if not email and telephone:
+        clean_digits = re.sub(r"\D", "", telephone)
+        email = f"gn_{clean_digits}@mecaconnect.local"
+
+    if not mot_de_passe:
+        mot_de_passe = f"Gn{uuid.uuid4().hex[:8]}"
+
+    if not nom_complet or not telephone or len(mot_de_passe) < 6:
         return jsonify(
             {
-                "error": "Nom complet, e-mail, téléphone (+224...) et mot de passe (min 6 caractères) sont requis."
+                "error": "Nom complet, téléphone (+224...) et mot de passe (min 6 caractères) sont requis."
             }
         ), 400
 
     if not re.fullmatch(r"\+224\d{8,9}", telephone):
         return jsonify({"error": "Numéro de téléphone guinéen invalide (ex: +224620123456)."}), 400
+
+    numero_piece = (data.get("numero_piece") or data.get("idNumber") or data.get("id_number") or "").strip().upper()
+    type_piece = (data.get("type_piece") or "CNI Guinée").strip()
+    has_piece_file = bool(request.files.get("photo_piece"))
+    has_selfie_file = bool(request.files.get("selfie") or request.files.get("kycSelfie") or data.get("selfie_data_url"))
 
     conn = get_db_connection()
     try:
@@ -336,15 +529,22 @@ def register():
             if cur.fetchone():
                 return jsonify({"error": "Un compte existe déjà avec cet e-mail ou ce numéro +224."}), 409
 
+            if numero_piece:
+                cur.execute("SELECT id FROM documents_kyc WHERE numero_document = %s", (numero_piece,))
+                if cur.fetchone():
+                    return jsonify({"error": "Cette pièce d'identité est déjà associée à un autre compte."}), 409
+
             cur.execute(
                 """
                 INSERT INTO utilisateurs (
                     nom_complet, email, telephone, mot_de_passe_hash, role,
-                    statut_kyc, ville, quartier, specialite, tarif_base_gnf
+                    statut_kyc, email_verifie, telephone_verifie, ville, quartier,
+                    specialite, tarif_base_gnf
                 )
-                VALUES (%s, %s, %s, %s, %s, 'en_attente', %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, 'en_attente', %s, %s, %s, %s, %s, %s)
                 RETURNING id, nom_complet, email, telephone, role, statut_kyc,
-                          ville, quartier, specialite, tarif_base_gnf, cree_le
+                          email_verifie, telephone_verifie, ville, quartier,
+                          specialite, tarif_base_gnf, cree_le
                 """,
                 (
                     nom_complet,
@@ -352,6 +552,8 @@ def register():
                     telephone,
                     generate_password_hash(mot_de_passe),
                     role,
+                    email_verifie,
+                    telephone_verifie,
                     ville,
                     quartier or None,
                     specialite or None,
@@ -359,23 +561,48 @@ def register():
                 ),
             )
             user = cur.fetchone()
+
+            if numero_piece or has_piece_file or has_selfie_file:
+                cur.execute(
+                    """
+                    INSERT INTO documents_kyc (
+                        utilisateur_id, type_document, numero_document, url_document, url_selfie, statut
+                    )
+                    VALUES (%s, %s, %s, %s, %s, 'en_attente')
+                    """,
+                    (
+                        user["id"],
+                        type_piece,
+                        numero_piece or f"DOC-{user['id']}-{uuid.uuid4().hex[:6].upper()}",
+                        "upload://piece-identite" if has_piece_file else "pending://piece-identite",
+                        "upload://selfie-kyc" if has_selfie_file else "pending://selfie-kyc",
+                    ),
+                )
+
             creer_notification(
                 cur,
                 user["id"],
                 "Bienvenue sur MecaConnect Guinée",
-                "Complétez votre vérification KYC (pièce d'identité + selfie) pour activer toutes les fonctionnalités.",
+                "Votre compte a été créé. Vérifiez votre e-mail, votre numéro +224 et votre dossier KYC.",
             )
         conn.commit()
-        return jsonify({"message": "Compte créé avec succès.", "user": user}), 201
+        token = generer_token_session(user["id"], user["role"])
+        return jsonify({"message": "Compte créé avec succès.", "token": token, "user": user}), 201
     finally:
         conn.close()
 
 
 @app.post("/api/auth/login")
 def login():
-    data = request.get_json(silent=True) or {}
-    identifiant = (data.get("email") or data.get("identifiant") or "").strip().lower()
-    mot_de_passe = data.get("mot_de_passe") or ""
+    data = get_payload_any()
+    identifiant = (
+        data.get("email")
+        or data.get("identifiant")
+        or data.get("identifier")
+        or data.get("phone")
+        or ""
+    ).strip().lower()
+    mot_de_passe = data.get("mot_de_passe") or data.get("password") or ""
 
     if not identifiant or not mot_de_passe:
         return jsonify({"error": "Identifiant (e-mail ou téléphone +224) et mot de passe requis."}), 400
@@ -401,7 +628,15 @@ def login():
             return jsonify({"error": "Ce compte est désactivé."}), 403
 
         user_safe = {k: v for k, v in user.items() if k != "mot_de_passe_hash"}
-        return jsonify({"message": "Connexion réussie.", "user": user_safe}), 200
+        token = generer_token_session(user["id"], user["role"])
+        return jsonify(
+            {
+                "message": "Connexion réussie.",
+                "token": token,
+                "role": user["role"],
+                "user": user_safe,
+            }
+        ), 200
     finally:
         conn.close()
 
@@ -418,16 +653,14 @@ def get_profil(user):
 @app.post("/api/kyc/soumettre")
 @auth_required
 def soumettre_kyc(user):
-    data = request.get_json(silent=True) or {}
+    data = get_payload_any()
     type_document = (data.get("type_document") or "CNI").strip()
     numero_document = (data.get("numero_document") or "").strip().upper()
-    url_document = (data.get("url_document") or "").strip()
-    url_selfie = (data.get("url_selfie") or "").strip()
+    url_document = (data.get("url_document") or "upload://piece-identite").strip()
+    url_selfie = (data.get("url_selfie") or "upload://selfie-kyc").strip()
 
-    if not numero_document or not url_document or not url_selfie:
-        return jsonify(
-            {"error": "Le numéro de pièce, la photo/URL du document et le selfie sont obligatoires."}
-        ), 400
+    if not numero_document:
+        return jsonify({"error": "Le numéro de pièce d'identité est obligatoire."}), 400
 
     conn = get_db_connection()
     try:
@@ -477,7 +710,7 @@ def soumettre_kyc(user):
 @app.post("/api/admin/kyc/<int:kyc_id>/valider")
 @admin_required
 def valider_kyc(admin_user, kyc_id: int):
-    data = request.get_json(silent=True) or {}
+    data = get_payload_any()
     approuve = bool(data.get("approuve", True))
     motif_rejet = (data.get("motif_rejet") or "").strip() or None
 
@@ -557,11 +790,15 @@ def lister_mecaniciens():
 @app.post("/api/demandes")
 @auth_required
 def creer_demande(user):
-    data = request.get_json(silent=True) or {}
-    type_panne = (data.get("type_panne") or "").strip()
+    data = get_payload_any()
+    type_panne = (data.get("type_panne") or data.get("categorie_panne") or "").strip()
     description = (data.get("description") or "").strip()
     localisation = (data.get("localisation") or "").strip()
-    montant_estime_gnf = int(data.get("montant_estime_gnf") or 75000)
+    if not localisation:
+        ville = (data.get("ville") or "").strip()
+        quartier = (data.get("quartier") or "").strip()
+        localisation = f"{quartier}, {ville}".strip(", ")
+    montant_estime_gnf = int(data.get("montant_estime_gnf") or data.get("tarif_gnf") or 75000)
     mecanicien_id = data.get("mecanicien_id")
 
     if not type_panne or not localisation:
@@ -637,17 +874,63 @@ def lister_demandes(user):
         conn.close()
 
 
+@app.route("/api/demandes/<int:demande_id>/statut", methods=["POST", "PATCH"])
+@auth_required
+def mettre_a_jour_statut_demande(user, demande_id: int):
+    data = get_payload_any()
+    nouveau_statut = (data.get("statut") or "").strip().lower()
+    if nouveau_statut not in ("en_attente", "acceptee", "en_route", "sur_place", "terminee", "annulee"):
+        return jsonify({"error": "Statut de demande invalide."}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM demandes_intervention WHERE id = %s", (demande_id,))
+            demande = cur.fetchone()
+            if not demande:
+                return jsonify({"error": "Demande introuvable."}), 404
+
+            mecanicien_id = demande["mecanicien_id"]
+            if nouveau_statut in ("acceptee", "en_route", "sur_place") and user["role"] == "mecanicien" and not mecanicien_id:
+                mecanicien_id = user["id"]
+
+            cur.execute(
+                """
+                UPDATE demandes_intervention
+                SET statut = %s, mecanicien_id = %s, mis_a_jour_le = NOW()
+                WHERE id = %s
+                RETURNING *
+                """,
+                (nouveau_statut, mecanicien_id, demande_id),
+            )
+            updated = cur.fetchone()
+            updated["montant_estime_formate"] = formater_gnf(updated.get("montant_estime_gnf") or 0)
+
+            creer_notification(
+                cur,
+                demande["client_id"],
+                "Mise à jour de votre demande",
+                f"Votre demande {demande['reference_code']} est maintenant : {nouveau_statut}.",
+            )
+        conn.commit()
+        return jsonify({"message": "Statut mis à jour.", "demande": updated}), 200
+    finally:
+        conn.close()
+
+
 # ==============================================================================
 # Paiements en Francs guinéens (GNF) & Notifications
 # ==============================================================================
 @app.post("/api/paiements")
 @auth_required
 def enregistrer_paiement(user):
-    data = request.get_json(silent=True) or {}
+    data = get_payload_any()
     demande_id = data.get("demande_id")
     montant_gnf = int(data.get("montant_gnf") or 0)
-    operateur = (data.get("operateur") or "Orange Money").strip()
-    numero_telephone = normaliser_telephone_gn(data.get("numero_telephone") or user["telephone"])
+    operateur = (data.get("operateur") or data.get("moyen_paiement") or "Orange Money").strip()
+    numero_telephone = normaliser_telephone_gn(
+        data.get("numero_telephone") or data.get("telephone") or user["telephone"]
+    )
 
     if montant_gnf <= 0:
         return jsonify({"error": "Le montant en GNF doit être supérieur à zéro."}), 400
@@ -706,6 +989,89 @@ def lister_notifications(user):
             )
             notifs = cur.fetchall()
         return jsonify({"notifications": notifs}), 200
+    finally:
+        conn.close()
+
+
+# ==============================================================================
+# Administration
+# ==============================================================================
+@app.get("/api/admin/overview")
+@admin_required
+def admin_overview(admin_user):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT u.id, u.nom_complet, u.email, u.telephone, u.role, u.statut_kyc,
+                       u.email_verifie, u.telephone_verifie, u.ville, u.quartier,
+                       u.specialite, u.actif, u.cree_le,
+                       d.type_document, d.numero_document, d.statut AS statut_document
+                FROM utilisateurs u
+                LEFT JOIN LATERAL (
+                    SELECT type_document, numero_document, statut
+                    FROM documents_kyc
+                    WHERE utilisateur_id = u.id
+                    ORDER BY id DESC
+                    LIMIT 1
+                ) d ON TRUE
+                ORDER BY u.id DESC
+                """
+            )
+            users = cur.fetchall()
+
+            cur.execute(
+                """
+                SELECT dm.*, cl.nom_complet AS client_nom, cl.telephone AS client_telephone
+                FROM demandes_intervention dm
+                LEFT JOIN utilisateurs cl ON cl.id = dm.client_id
+                ORDER BY dm.id DESC
+                """
+            )
+            demandes = cur.fetchall()
+            for dm in demandes:
+                dm["montant_estime_formate"] = formater_gnf(dm.get("montant_estime_gnf") or 0)
+
+            cur.execute(
+                """
+                SELECT p.*, dm.reference_code AS demande_ref
+                FROM paiements_gnf p
+                LEFT JOIN demandes_intervention dm ON dm.id = p.demande_id
+                ORDER BY p.id DESC
+                """
+            )
+            paiements = cur.fetchall()
+            for p in paiements:
+                p["montant_formate"] = formater_gnf(p.get("montant_gnf") or 0)
+
+        total_users = len(users)
+        chauffeurs = sum(1 for u in users if u.get("role") in ("client", "chauffeur"))
+        mecaniciens = sum(1 for u in users if u.get("role") == "mecanicien")
+        total_demandes = len(demandes)
+        pending_demandes = sum(1 for d in demandes if d.get("statut") == "en_attente")
+        total_revenus_gnf = sum(
+            int(p.get("montant_gnf") or 0)
+            for p in paiements
+            if p.get("statut") in ("confirme", "paye", None)
+        )
+
+        return jsonify(
+            {
+                "stats": {
+                    "total_users": total_users,
+                    "chauffeurs": chauffeurs,
+                    "mecaniciens": mecaniciens,
+                    "total_demandes": total_demandes,
+                    "pending_demandes": pending_demandes,
+                    "total_revenus_gnf": total_revenus_gnf,
+                    "total_revenus_formate": formater_gnf(total_revenus_gnf),
+                },
+                "users": users,
+                "demandes": demandes,
+                "paiements": paiements,
+            }
+        ), 200
     finally:
         conn.close()
 

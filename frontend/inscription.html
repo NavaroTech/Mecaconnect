@@ -48,7 +48,7 @@
             <section class="form-card">
                 <h1>Inscription &amp; Vérification KYC</h1>
                 <p>
-                    Créez votre compte chauffeur ou mécanicien en Guinée avec vérification d'e-mail et d'identité (un seul compte par document officiel).
+                    Créez votre compte chauffeur ou mécanicien en Guinée avec vérification par e-mail, SMS (+224) et pièce d'identité.
                 </p>
 
                 <form id="inscriptionForm" novalidate>
@@ -61,7 +61,20 @@
 
                         <div class="form-group">
                             <label for="telephone">Téléphone (+224)</label>
-                            <input type="tel" id="telephone" name="telephone" placeholder="Ex. +224 620 00 00 00" required />
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="tel" id="telephone" name="telephone" placeholder="Ex. +224 620 00 00 00" required />
+                                <button type="button" id="sendSmsBtn" class="btn-secondary" style="white-space: nowrap;">Envoyer SMS</button>
+                            </div>
+                            <small id="smsStatusHint" class="kyc-hint">Vérification du numéro guinéen (+224) par code SMS.</small>
+                        </div>
+
+                        <div class="form-group" id="smsOtpGroup" style="display: none;">
+                            <label for="smsOtp">Code SMS (+224 — 6 chiffres)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" id="smsOtp" name="sms_otp" maxlength="6" inputmode="numeric" placeholder="Ex. 192837" />
+                                <button type="button" id="verifySmsBtn" class="btn-primary" style="white-space: nowrap;">Valider SMS</button>
+                            </div>
+                            <small id="smsOtpStatusHint" class="kyc-hint"></small>
                         </div>
 
                         <div class="form-group">
@@ -70,7 +83,7 @@
                                 <input type="email" id="email" name="email" placeholder="Ex. mamadou@exemple.gn" required />
                                 <button type="button" id="sendOtpBtn" class="btn-secondary" style="white-space: nowrap;">Envoyer le code</button>
                             </div>
-                            <small id="emailStatusHint" class="kyc-hint">Un code à 6 chiffres sera envoyé pour confirmer que l'adresse existe.</small>
+                            <small id="emailStatusHint" class="kyc-hint">Un code à 6 chiffres sera envoyé pour confirmer l'adresse e-mail.</small>
                         </div>
 
                         <div class="form-group" id="otpGroup" style="display: none;">
@@ -145,8 +158,10 @@
                         </div>
 
                         <div class="kyc-box">
-                            <label>2. Selfie en direct (caméra obligatoire)</label>
+                            <label>2. Selfie en direct (caméra)</label>
                             <p class="kyc-hint" id="selfieStatus">Cliquez sur « Activer la caméra » puis « Prendre le selfie ».</p>
+                            <video id="selfieVideo" autoplay playsinline style="display:none; width:100%; max-height:180px; border-radius:8px; margin-top:8px;"></video>
+                            <img id="selfiePreview" alt="Aperçu selfie KYC" style="display:none; width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-top:8px;" />
                             <div class="kyc-actions">
                                 <button type="button" id="startCameraBtn" class="btn-secondary">📷 Activer la caméra</button>
                                 <button type="button" id="takeSelfieBtn" class="btn-primary" disabled>🤳 Prendre le selfie</button>
@@ -157,7 +172,7 @@
                     <div class="section-title">Sécurité du compte</div>
                     <div class="form-group">
                         <label for="motDePasse">Mot de passe</label>
-                        <input type="password" id="motDePasse" name="mot_de_passe" placeholder="Choisissez un mot de passe" required />
+                        <input type="password" id="motDePasse" name="mot_de_passe" placeholder="Choisissez un mot de passe (min. 6 caractères)" required />
                     </div>
 
                     <div class="hero-actions">

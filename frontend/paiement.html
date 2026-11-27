@@ -38,7 +38,7 @@
                 <a href="chauffeur.html" class="nav-item">🚗 <span>Chauffeur</span></a>
                 <a href="mecanicien.html" class="nav-item">🛠️ <span>Mécanicien</span></a>
                 <a href="demande.html" class="nav-item">🚨 <span>Demande</span></a>
-                <a href="paiement.html" class="nav-item">💳 <span>Paiement</span></a>
+                <a href="paiement.html" class="nav-item active">💳 <span>Paiement</span></a>
                 <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
                 <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
                 <a href="admin.html" class="nav-item">🛡️ <span>Administration</span></a>
@@ -155,7 +155,7 @@
             moyenSelect?.addEventListener("change", syncMoyen);
             syncMoyen();
 
-            form?.addEventListener("submit", (e) => {
+            form?.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 const ref = (refInput?.value || "").trim();
                 const montant = Number(montantInput?.value || 0);
@@ -178,7 +178,33 @@
                     return;
                 }
 
-                const codeRef = `MC-GN-${Math.floor(1000 + Math.random() * 9000)}`;
+                let codeRef = `MC-GN-${Math.floor(1000 + Math.random() * 9000)}`;
+
+                try {
+                    const headers = typeof getAuthHeaders === "function" ? getAuthHeaders({ "Content-Type": "application/json" }) : { "Content-Type": "application/json" };
+                    const res = await fetch(`${API_BASE_URL}/paiements`, {
+                        method: "POST",
+                        headers,
+                        body: JSON.stringify({
+                            reference: ref,
+                            montant_gnf: montant,
+                            operateur: moyen,
+                            numero_telephone: tel
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        if (data.paiement?.reference_paiement) {
+                            codeRef = data.paiement.reference_paiement;
+                        }
+                        if (typeof refreshNotificationsBadge === "function") {
+                            refreshNotificationsBadge();
+                        }
+                    }
+                } catch (_) {
+                    // Conserve l'affichage local si non connecté
+                }
+
                 if (historique) {
                     const item = document.createElement("article");
                     item.className = "paiement-item";

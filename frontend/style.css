@@ -76,6 +76,7 @@ p {
 }
 
 /* --- Topbar claire --- */
+.topbar,
 .topbar-light {
     position: sticky;
     top: 0;
@@ -325,7 +326,10 @@ p {
     padding: 18px 20px;
 }
 
-.card-header {
+.card-header,
+.page-header,
+.section-head,
+.section-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -370,8 +374,57 @@ p {
     color: var(--danger);
 }
 
+.api-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: var(--text-main);
+}
+
+.api-badge.ok {
+    background: #f0fdf4;
+    color: var(--success);
+    border: 1px solid #bbf7d0;
+}
+
+.api-badge.err {
+    background: #fef2f2;
+    color: var(--danger);
+    border: 1px solid #fecaca;
+}
+
+.status-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    border: 1px solid var(--line-light);
+    background: #f8fafc;
+}
+
+.status-box.error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: var(--danger);
+}
+
+.status-box.success {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: var(--success);
+}
+
+.hidden {
+    display: none !important;
+}
+
 /* --- Grilles --- */
-.stats-grid {
+.stats-grid,
+.admin-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 16px;
@@ -519,13 +572,15 @@ textarea:focus {
 }
 
 /* --- Tableau --- */
-.table-wrap {
+.table-wrap,
+.table-responsive {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
-table {
+table,
+.admin-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
@@ -633,6 +688,7 @@ th {
 }
 
 @media (max-width: 600px) {
+    .topbar,
     .topbar-light {
         flex-direction: column;
         align-items: stretch;

@@ -18,7 +18,7 @@
             <a href="notifications.html" class="btn-notif">
                 🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
             </a>
-            <a href="inscription.html" class="btn-cta-orange auth-guest-only">Créer un compte</a>
+            <a href="inscription.html" class="btn-cta-orange auth-guest-only" data-auth-login>Créer un compte</a>
             <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
         </div>
     </header>
@@ -53,13 +53,13 @@
 
                 <form id="connexionForm" novalidate>
                     <div class="form-group">
-                        <label for="loginEmail">Adresse e-mail</label>
+                        <label for="loginEmail">Adresse e-mail ou téléphone (+224)</label>
                         <input
-                            type="email"
+                            type="text"
                             id="loginEmail"
                             name="email"
-                            placeholder="Ex. mamadou@exemple.gn"
-                            autocomplete="email"
+                            placeholder="Ex. mamadou@exemple.gn ou +224620000000"
+                            autocomplete="username"
                             required
                         />
                     </div>

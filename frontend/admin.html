@@ -7,11 +7,12 @@
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <header class="topbar">
+    <header class="topbar topbar-light">
         <div class="topbar-brand">
             <a href="index.html" class="logo">🔧 <span>MecaConnect</span> <small>Guinée — Admin</small></a>
         </div>
         <div class="topbar-actions">
+            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
             <span class="user-greeting">Bonjour, <strong data-user-name>Administrateur</strong></span>
             <a href="notifications.html" class="btn-notif">
                 🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
@@ -41,10 +42,9 @@
                     <h1>🛡️ Tableau de bord Administrateur</h1>
                     <p>Supervision globale MecaConnect — Conakry, Labé et toute la République de Guinée.</p>
                 </div>
-                <button type="button" id="refreshAdminBtn" class="btn-primary">🔄 Actualiser MySQL</button>
+                <button type="button" id="refreshAdminBtn" class="btn-primary">🔄 Actualiser Base</button>
             </section>
 
-            <!-- Statistiques KPI -->
             <section class="admin-stats-grid" id="adminStatsGrid">
                 <article class="stat-card card">
                     <h3>Utilisateurs inscrits</h3>
@@ -63,10 +63,9 @@
                 </article>
             </section>
 
-            <!-- Gestion des utilisateurs et pièces d'identité -->
             <section class="card admin-section">
                 <div class="section-head">
-                    <h2>👥 Utilisateurs & Vérification d'identité (Guinée)</h2>
+                    <h2>👥 Utilisateurs &amp; Vérification d'identité (Guinée)</h2>
                     <input
                         type="text"
                         id="adminUserSearch"
@@ -78,7 +77,7 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Nom & Rôle</th>
+                                <th>Nom &amp; Rôle</th>
                                 <th>Contact (+224)</th>
                                 <th>Pièce d'identité</th>
                                 <th>Atelier</th>
@@ -93,7 +92,6 @@
                 </div>
             </section>
 
-            <!-- Supervision des demandes -->
             <section class="card admin-section">
                 <div class="section-head">
                     <h2>🚨 Supervision des demandes</h2>
@@ -104,7 +102,7 @@
                             <tr>
                                 <th>Réf.</th>
                                 <th>Chauffeur</th>
-                                <th>Véhicule & Panne</th>
+                                <th>Véhicule &amp; Panne</th>
                                 <th>Localisation</th>
                                 <th>Montant</th>
                                 <th>Statut</th>
@@ -118,10 +116,9 @@
                 </div>
             </section>
 
-            <!-- Historique des paiements GNF -->
             <section class="card admin-section">
                 <div class="section-head">
-                    <h2>💳 Transactions & Paiements en GNF</h2>
+                    <h2>💳 Transactions &amp; Paiements en GNF</h2>
                 </div>
                 <div class="table-responsive">
                     <table class="admin-table">
@@ -144,7 +141,6 @@
         </main>
     </div>
 
-    <!-- Bande animée pièces mécaniques en bas -->
     <div class="mechanical-stage" aria-hidden="true">
         <div class="mechanical-track">
             <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
