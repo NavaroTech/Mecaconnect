@@ -1,885 +1,872 @@
-const API_BASE_URL = (
-  window.API_BASE_URL ||
-  window.API_BASE ||
-  "https://mecaconnect-api.onrender.com/api"
-).replace(/\/+$/, "");
+(() => {
+  const API_BASE =
+    window.MECACONNECT_API_BASE ||
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "http://localhost:5000/api"
+      : "https://mecaconnect-api.onrender.com/api");
 
-const TOKEN_KEY = "mecaconnect_token";
-const USER_KEY = "mecaconnect_user";
+  const STORAGE_USER_KEY = "mecaconnect_user";
+  const STORAGE_TOKEN_KEY = "mecaconnect_token";
+  const STORAGE_INTERVENTIONS_KEY = "mecaconnect_interventions";
+  const STORAGE_PAYMENTS_KEY = "mecaconnect_payments";
+  const STORAGE_NOTIFICATIONS_KEY = "mecaconnect_notifications";
 
-function getStoredToken() {
-  return localStorage.getItem(TOKEN_KEY) || "";
-}
+  const PUBLIC_PAGES = new Set(["index.html", "connexion.html", "inscription.html", ""]);
+  const PROTECTED_PAGES = new Set([
+    "chauffeur.html",
+    "mecanicien.html",
+    "paiement.html",
+    "profil.html",
+    "admin.html"
+  ]);
 
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (_) {
-    return null;
+  function getCurrentPage() {
+    const raw = window.location.pathname.split("/").pop() || "index.html";
+    return raw.toLowerCase();
   }
-}
 
-function saveSession(token, user) {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
+  function getStoredUser() {
+    try {
+      const raw = localStorage.getItem(STORAGE_USER_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (_) {
+      return null;
+    }
   }
-  if (user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+  function getStoredToken() {
+    const user = getStoredUser();
+    return localStorage.getItem(STORAGE_TOKEN_KEY) || (user && user.token) || "";
   }
-}
 
-function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-}
-
-function getAuthHeaders(extra = {}) {
-  const headers = { ...extra };
-  const token = getStoredToken();
-  const user = getStoredUser();
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  function isAuthenticated() {
+    const user = getStoredUser();
+    const token = getStoredToken();
+    return Boolean(user && (user.id || user.email || token));
   }
-  if (user && user.id) {
-    headers["X-User-Id"] = String(user.id);
+
+  function saveSession(user, token) {
+    if (user) {
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+    }
+    if (token) {
+      localStorage.setItem(STORAGE_TOKEN_KEY, token);
+    } else if (user && user.token) {
+      localStorage.setItem(STORAGE_TOKEN_KEY, user.token);
+    }
   }
-  return headers;
-}
 
-function setFeedback(el, message, isError = false) {
-  if (!el) return;
-  el.textContent = message;
-  el.style.color = isError ? "#dc2626" : "#15803d";
-  if (el.classList.contains("status-box")) {
-    el.classList.remove("hidden", "error", "success", "info");
-    el.classList.add(isError ? "error" : "success");
+  function clearSession() {
+    localStorage.removeItem(STORAGE_USER_KEY);
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
   }
-}
 
-function showStatus(element, message, type = "info") {
-  if (!element) return;
-  element.textContent = message;
-  element.className = `status-box ${type}`;
-  element.classList.remove("hidden");
-}
+  // Verrouillage immédiat des pages privées pour les visiteurs non connectés
+  function enforceRouteAccess() {
+    const page = getCurrentPage();
+    const loggedIn = isAuthenticated();
+    const user = getStoredUser();
 
-function normalizeGuineaPhone(raw) {
-  const digits = String(raw || "").replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.startsWith("224") ? `+${digits}` : `+224${digits}`;
-}
+    if (PROTECTED_PAGES.has(page) && !loggedIn) {
+      window.location.replace("connexion.html");
+      return false;
+    }
 
-function isValidIdentifier(value) {
-  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  const isGuineaPhone = /^\+224\d{8,9}$/.test(value.replace(/\s+/g, ""));
-  return isEmail || isGuineaPhone;
-}
+    if (page === "admin.html" && user && user.role !== "admin") {
+      window.location.replace("profil.html");
+      return false;
+    }
 
-function formatGnf(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num < 0) {
-    return "0 GNF";
+    return true;
   }
-  return `${new Intl.NumberFormat("fr-FR").format(Math.round(num))} GNF`;
-}
 
-function syncHeaderUI() {
-  const user = getStoredUser();
-  const displayName = user?.nom_complet || user?.nom || user?.email || "Invité";
-
-  document.querySelectorAll("[data-user-name]").forEach((el) => {
-    el.textContent = displayName;
-  });
-
-  const isLoggedIn = Boolean(user && (user.id || user.email || getStoredToken()));
-  document.querySelectorAll(".auth-guest-only").forEach((el) => {
-    el.style.display = isLoggedIn ? "none" : "";
-  });
-  document.querySelectorAll("[data-auth-logout]").forEach((el) => {
-    el.style.display = isLoggedIn ? "" : "none";
-  });
-}
-
-async function refreshNotificationsBadge() {
-  const badges = document.querySelectorAll("[data-notif-badge]");
-  if (!badges.length) return;
-
-  const user = getStoredUser();
-  if (!user && !getStoredToken()) {
-    badges.forEach((b) => { b.textContent = "0"; });
+  if (!enforceRouteAccess()) {
     return;
   }
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/notifications`, {
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) return;
-    const data = await res.json().catch(() => ({}));
-    const list = Array.isArray(data.notifications) ? data.notifications : [];
-    const unread = list.filter((n) => !n.lu).length;
-    badges.forEach((b) => { b.textContent = String(unread); });
-  } catch (_) {
-    // Silencieux
+  function normalizeGuineaPhone(phone) {
+    const digits = String(phone || "").replace(/\D/g, "");
+    if (!digits) return "";
+    if (digits.startsWith("224") && digits.length === 12) {
+      return `+${digits}`;
+    }
+    if (digits.length === 9 && digits.startsWith("6")) {
+      return `+224${digits}`;
+    }
+    return phone.trim();
   }
-}
 
-function bindLogout() {
-  document.querySelectorAll("[data-auth-logout], #logoutBtn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      clearSession();
-      syncHeaderUI();
-      window.location.href = "./connexion.html";
-    });
-  });
-}
+  function isValidGuineaPhone(phone) {
+    return /^\+2246\d{8}$/.test(normalizeGuineaPhone(phone));
+  }
 
-async function checkApiHealth(statusTarget = null) {
-  const badge = document.getElementById("apiStatusBadge");
-  try {
-    const response = await fetch(`${API_BASE_URL}/health`, { method: "GET" });
-    const data = await response.json().catch(() => ({}));
+  function formatGnf(value) {
+    const amount = Number(value || 0);
+    if (Number.isNaN(amount)) return "0 GNF";
+    return `${Math.round(amount).toLocaleString("fr-FR")} GNF`;
+  }
 
-    if (response.ok && data.database === "connected") {
-      if (badge) {
-        badge.textContent = "API & Base connectées";
-        badge.className = "api-badge ok";
-      }
-      if (statusTarget) {
-        showStatus(statusTarget, "API et base de données opérationnelles.", "success");
-      }
-      return true;
+  function escapeHtml(text) {
+    return String(text ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  async function apiRequest(endpoint, options = {}) {
+    const token = getStoredToken();
+    const headers = {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
     }
 
-    throw new Error(data.details || `Statut HTTP ${response.status}`);
-  } catch (err) {
-    if (badge) {
-      badge.textContent = "API en veille ou inaccessible";
-      badge.className = "api-badge err";
-    }
-    if (statusTarget) {
-      showStatus(
-        statusTarget,
-        `Impossible de joindre le serveur (${API_BASE_URL}) : ${err.message}`,
-        "error"
-      );
-    }
-    return false;
-  }
-}
-
-async function submitLoginRequest(rawIdentifier, password, feedbackEl) {
-  const cleanId = String(rawIdentifier || "").trim();
-  const isEmail = cleanId.includes("@");
-  const identifier = isEmail ? cleanId.toLowerCase() : normalizeGuineaPhone(cleanId);
-
-  if (!cleanId || !password) {
-    setFeedback(feedbackEl, "Identifiant (e-mail ou téléphone +224) et mot de passe requis.", true);
-    return;
-  }
-
-  if (!isValidIdentifier(identifier)) {
-    setFeedback(
-      feedbackEl,
-      "Format invalide : saisissez un e-mail valide ou un numéro +224 (8 ou 9 chiffres).",
-      true
-    );
-    return;
-  }
-
-  setFeedback(feedbackEl, "Connexion en cours...", false);
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        identifier,
-        identifiant: identifier,
-        email: isEmail ? identifier : "",
-        phone: isEmail ? "" : identifier,
-        password,
-        mot_de_passe: password
-      })
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers
     });
 
-    const data = await response.json().catch(() => ({}));
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+      ? await response.json()
+      : { message: await response.text() };
+
     if (!response.ok) {
-      throw new Error(data.error || data.message || `Erreur HTTP ${response.status}`);
+      const errorMessage =
+        data.error || data.message || `Erreur serveur (${response.status})`;
+      throw new Error(errorMessage);
     }
-
-    const userObj = data.user || { email: isEmail ? identifier : "", role: data.role || "" };
-    saveSession(data.token || "", userObj);
-    syncHeaderUI();
-
-    setFeedback(feedbackEl, "Connexion réussie ! Redirection...", false);
-    const role = userObj.role || data.role || "";
-    setTimeout(() => {
-      window.location.href = role === "admin" ? "./admin.html" : "./profil.html";
-    }, 600);
-  } catch (err) {
-    setFeedback(feedbackEl, `Erreur de connexion : ${err.message}`, true);
+    return data;
   }
-}
 
-function bindLoginForms() {
-  const connexionForm = document.getElementById("connexionForm");
-  if (connexionForm) {
-    connexionForm.addEventListener("submit", async (e) => {
+  function setStatusMessage(target, text, type = "info") {
+    const el = typeof target === "string" ? document.getElementById(target) : target;
+    if (!el) return;
+    el.textContent = text || "";
+    el.style.display = text ? "block" : "none";
+    el.classList.remove("status-success", "status-error", "status-info");
+    if (type === "success") {
+      el.style.color = "#15803d";
+      el.classList.add("status-success");
+    } else if (type === "error") {
+      el.style.color = "#dc2626";
+      el.classList.add("status-error");
+    } else {
+      el.style.color = "#1d4ed8";
+      el.classList.add("status-info");
+    }
+  }
+
+  function updateNavigationUI() {
+    const user = getStoredUser();
+    const loggedIn = isAuthenticated();
+
+    // Mise à jour du message de bienvenue dans l'en-tête
+    const greetingTargets = document.querySelectorAll(
+      "#userGreeting, .user-greeting, [data-user-greeting]"
+    );
+    greetingTargets.forEach((el) => {
+      if (loggedIn && user) {
+        const displayName = user.nom || user.full_name || user.email || "Membre";
+        el.innerHTML = `Bonjour, <strong>${escapeHtml(displayName)}</strong>`;
+      } else {
+        el.innerHTML = `Bonjour, <strong>Invité</strong>`;
+      }
+    });
+
+    // Masquer les liens privés dans le menu latéral et les barres de navigation si déconnecté
+    document.querySelectorAll("a[href]").forEach((link) => {
+      const href = (link.getAttribute("href") || "").split("?")[0].toLowerCase();
+      if (!PROTECTED_PAGES.has(href)) return;
+
+      const wrapper = link.closest("li") || link;
+      if (!loggedIn) {
+        wrapper.style.display = "none";
+      } else if (href === "admin.html" && user && user.role !== "admin") {
+        wrapper.style.display = "none";
+      } else {
+        wrapper.style.display = "";
+      }
+    });
+
+    // Gestion des boutons Créer un compte / Déconnexion
+    document.querySelectorAll("[data-auth-only]").forEach((el) => {
+      el.style.display = loggedIn ? "" : "none";
+    });
+    document.querySelectorAll("[data-guest-only]").forEach((el) => {
+      el.style.display = loggedIn ? "none" : "";
+    });
+
+    const headerActions = document.querySelector(".header-actions, .top-actions, header");
+    if (loggedIn && headerActions && !document.getElementById("globalLogoutBtn")) {
+      const signupLinks = headerActions.querySelectorAll('a[href*="inscription.html"]');
+      signupLinks.forEach((a) => {
+        a.style.display = "none";
+      });
+
+      const logoutBtn = document.createElement("button");
+      logoutBtn.id = "globalLogoutBtn";
+      logoutBtn.type = "button";
+      logoutBtn.className = "btn btn-secondary";
+      logoutBtn.style.marginLeft = "8px";
+      logoutBtn.textContent = "Déconnexion";
+      logoutBtn.addEventListener("click", () => {
+        clearSession();
+        window.location.href = "connexion.html";
+      });
+      headerActions.appendChild(logoutBtn);
+    }
+  }
+
+  // Formatage dynamique du montant GNF (accueil & paiement)
+  function initAmountFormatter() {
+    const amountInput = document.getElementById("amountGnf") || document.getElementById("montantGnf");
+    const formattedSpan =
+      document.getElementById("formattedAmount") || document.getElementById("montantFormate");
+    if (!amountInput || !formattedSpan) return;
+
+    const refresh = () => {
+      formattedSpan.textContent = `Montant formaté : ${formatGnf(amountInput.value)}`;
+    };
+    amountInput.addEventListener("input", refresh);
+    refresh();
+  }
+
+  // Page de connexion (connexion.html)
+  function initLoginPage() {
+    const form =
+      document.getElementById("loginForm") ||
+      document.querySelector("form[data-form='login']") ||
+      (getCurrentPage() === "connexion.html" ? document.querySelector("form") : null);
+    if (!form) return;
+
+    const statusBox =
+      document.getElementById("loginStatus") ||
+      (() => {
+        const p = document.createElement("p");
+        p.id = "loginStatus";
+        p.style.marginTop = "10px";
+        p.style.fontWeight = "600";
+        form.appendChild(p);
+        return p;
+      })();
+
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const idVal = document.getElementById("loginEmail")?.value || "";
-      const pwdVal = document.getElementById("loginPassword")?.value || "";
-      const fb = document.getElementById("loginFeedback");
-      await submitLoginRequest(idVal, pwdVal, fb);
-    });
-  }
+      const identifierInput = form.querySelector(
+        "#loginIdentifier, #email, input[name='identifier'], input[name='email'], input[type='text'], input[type='email']"
+      );
+      const passwordInput = form.querySelector(
+        "#loginPassword, #password, input[name='password'], input[type='password']"
+      );
 
-  const loginForm = document.getElementById("loginForm");
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const idVal = document.getElementById("loginIdentifier")?.value || "";
-      const pwdVal = document.getElementById("loginPassword")?.value || "";
-      const fb = document.getElementById("loginStatus");
-      await submitLoginRequest(idVal, pwdVal, fb);
-    });
-  }
-}
+      const identifier = (identifierInput?.value || "").trim();
+      const password = passwordInput?.value || "";
 
-function bindInscriptionForm() {
-  const form = document.getElementById("inscriptionForm");
-  if (!form) return;
-
-  let emailVerified = false;
-  let smsVerified = false;
-  let selfieDataUrl = "";
-  let cameraStream = null;
-
-  const telInput = document.getElementById("telephone");
-  if (telInput) {
-    telInput.addEventListener("blur", () => {
-      const norm = normalizeGuineaPhone(telInput.value);
-      if (norm) telInput.value = norm;
-    });
-  }
-
-  // --- Vérification OTP E-mail ---
-  const sendOtpBtn = document.getElementById("sendOtpBtn");
-  const otpGroup = document.getElementById("otpGroup");
-  const emailHint = document.getElementById("emailStatusHint");
-  const verifyOtpBtn = document.getElementById("verifyOtpBtn");
-  const otpHint = document.getElementById("otpStatusHint");
-
-  if (sendOtpBtn) {
-    sendOtpBtn.addEventListener("click", async () => {
-      const email = (document.getElementById("email")?.value || "").trim().toLowerCase();
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        setFeedback(emailHint, "Saisissez une adresse e-mail valide avant d'envoyer le code.", true);
+      if (!identifier || !password) {
+        setStatusMessage(statusBox, "Veuillez renseigner votre identifiant et votre mot de passe.", "error");
         return;
       }
+
+      setStatusMessage(statusBox, "Connexion en cours...", "info");
+
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+        const payload = {
+          identifier: identifier.includes("@") ? identifier.toLowerCase() : normalizeGuineaPhone(identifier),
+          email: identifier.includes("@") ? identifier.toLowerCase() : undefined,
+          password
+        };
+        const res = await apiRequest("/auth/login", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
+          body: JSON.stringify(payload)
         });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Impossible d'envoyer le code e-mail.");
-        if (otpGroup) otpGroup.style.display = "";
-        setFeedback(
-          emailHint,
-          data.otp_code
-            ? `Code e-mail envoyé (test : ${data.otp_code}, expire dans ${data.expires_in_minutes || 15} min).`
-            : "Code envoyé à votre adresse e-mail.",
-          false
-        );
-      } catch (err) {
-        setFeedback(emailHint, err.message, true);
-      }
-    });
-  }
 
-  if (verifyOtpBtn) {
-    verifyOtpBtn.addEventListener("click", async () => {
-      const email = (document.getElementById("email")?.value || "").trim().toLowerCase();
-      const codeOtp = (document.getElementById("emailOtp")?.value || "").trim();
-      if (!email || !codeOtp) {
-        setFeedback(otpHint, "Saisissez l'e-mail et le code à 6 chiffres.", true);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/verify-email-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, code_otp: codeOtp })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Code e-mail invalide.");
-        emailVerified = true;
-        setFeedback(otpHint, "Adresse e-mail vérifiée avec succès.", false);
-      } catch (err) {
-        setFeedback(otpHint, err.message, true);
-      }
-    });
-  }
+        const user = res.user || res.utilisateur || res;
+        const token = res.token || user.token || "";
+        saveSession(user, token);
+        setStatusMessage(statusBox, "Connexion réussie. Redirection...", "success");
 
-  // --- Vérification OTP SMS (+224) ---
-  const sendSmsBtn = document.getElementById("sendSmsBtn");
-  const smsOtpGroup = document.getElementById("smsOtpGroup");
-  const smsStatusHint = document.getElementById("smsStatusHint");
-  const verifySmsBtn = document.getElementById("verifySmsBtn");
-  const smsOtpHint = document.getElementById("smsOtpStatusHint");
-
-  if (sendSmsBtn) {
-    sendSmsBtn.addEventListener("click", async () => {
-      const phone = normalizeGuineaPhone(document.getElementById("telephone")?.value || "");
-      if (!/^\+224\d{8,9}$/.test(phone)) {
-        setFeedback(smsStatusHint, "Numéro invalide : saisissez un numéro +224 (8 ou 9 chiffres).", true);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/request-sms-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ telephone: phone, phone })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Impossible d'envoyer le SMS.");
-        if (smsOtpGroup) smsOtpGroup.style.display = "";
-        setFeedback(
-          smsStatusHint,
-          data.otp_code
-            ? `SMS envoyé au ${phone} (test : ${data.otp_code}, expire dans ${data.expires_in_minutes || 10} min).`
-            : `SMS envoyé au ${phone}.`,
-          false
-        );
-      } catch (err) {
-        setFeedback(smsStatusHint, err.message, true);
-      }
-    });
-  }
-
-  if (verifySmsBtn) {
-    verifySmsBtn.addEventListener("click", async () => {
-      const phone = normalizeGuineaPhone(document.getElementById("telephone")?.value || "");
-      const codeOtp = (document.getElementById("smsOtp")?.value || "").trim();
-      if (!/^\+224\d{8,9}$/.test(phone) || !codeOtp) {
-        setFeedback(smsOtpHint, "Numéro +224 et code SMS requis.", true);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/verify-sms-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ telephone: phone, phone, code_otp: codeOtp })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Code SMS invalide.");
-        smsVerified = true;
-        setFeedback(smsOtpHint, "Numéro +224 vérifié avec succès.", false);
-      } catch (err) {
-        setFeedback(smsOtpHint, err.message, true);
-      }
-    });
-  }
-
-  // --- Caméra Selfie KYC ---
-  const startCameraBtn = document.getElementById("startCameraBtn");
-  const takeSelfieBtn = document.getElementById("takeSelfieBtn");
-  const selfieStatus = document.getElementById("selfieStatus");
-  const selfieVideo = document.getElementById("selfieVideo");
-  const selfiePreview = document.getElementById("selfiePreview");
-
-  if (startCameraBtn && takeSelfieBtn) {
-    startCameraBtn.addEventListener("click", async () => {
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("Caméra non prise en charge sur ce navigateur.");
-        }
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false
-        });
-        if (selfieVideo) {
-          selfieVideo.srcObject = cameraStream;
-          selfieVideo.style.display = "block";
-        }
-        takeSelfieBtn.disabled = false;
-        setFeedback(selfieStatus, "Caméra activée. Cadrez votre visage puis cliquez sur « Prendre le selfie ».", false);
-      } catch (err) {
-        setFeedback(selfieStatus, `Caméra indisponible (${err.message}). Vous pouvez continuer l'inscription.`, true);
-      }
-    });
-
-    takeSelfieBtn.addEventListener("click", () => {
-      try {
-        if (selfieVideo && selfieVideo.videoWidth) {
-          const canvas = document.createElement("canvas");
-          canvas.width = selfieVideo.videoWidth;
-          canvas.height = selfieVideo.videoHeight;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(selfieVideo, 0, 0);
-          selfieDataUrl = canvas.toDataURL("image/jpeg", 0.85);
-          if (selfiePreview) {
-            selfiePreview.src = selfieDataUrl;
-            selfiePreview.style.display = "block";
-          }
-          selfieVideo.style.display = "none";
+        if (user.role === "admin") {
+          window.location.href = "admin.html";
+        } else if (user.role === "mecanicien") {
+          window.location.href = "mecanicien.html";
+        } else if (user.role === "chauffeur") {
+          window.location.href = "chauffeur.html";
         } else {
-          selfieDataUrl = "captured://selfie-kyc";
+          window.location.href = "profil.html";
         }
-        if (cameraStream) {
-          cameraStream.getTracks().forEach((t) => t.stop());
-          cameraStream = null;
-        }
-        setFeedback(selfieStatus, "Selfie capturé avec succès.", false);
       } catch (err) {
-        setFeedback(selfieStatus, `Erreur capture selfie : ${err.message}`, true);
+        setStatusMessage(statusBox, `Erreur de connexion : ${err.message}`, "error");
       }
     });
   }
 
-  // --- Soumission Inscription ---
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const fb = document.getElementById("inscriptionFeedback");
+  // Page d'inscription KYC + Double OTP (E-mail & SMS +224) + Caméra Selfie
+  function initRegisterPage() {
+    const form =
+      document.getElementById("registerForm") ||
+      document.querySelector("form[data-form='register']") ||
+      (getCurrentPage() === "inscription.html" ? document.querySelector("form") : null);
+    if (!form) return;
 
-    const nomComplet = (document.getElementById("nomComplet")?.value || "").trim();
-    const telephone = normalizeGuineaPhone(document.getElementById("telephone")?.value || "");
-    const email = (document.getElementById("email")?.value || "").trim().toLowerCase();
-    const role = document.getElementById("roleCompte")?.value || "chauffeur";
-    const ville = document.getElementById("ville")?.value || "Conakry";
-    const quartier = (document.getElementById("quartier")?.value || "").trim();
-    const typePiece = document.getElementById("typePiece")?.value || "CNI Guinée";
-    const numeroPiece = (document.getElementById("numeroPiece")?.value || "").trim().toUpperCase();
-    const dateExpiration = document.getElementById("dateExpiration")?.value || "";
-    const refAtelier = (document.getElementById("refAtelier")?.value || "").trim();
-    const motDePasse = document.getElementById("motDePasse")?.value || "";
+    const otpState = {
+      emailVerified: false,
+      phoneVerified: false,
+      selfieDataUrl: ""
+    };
 
-    if (!nomComplet || !/^\+224\d{8,9}$/.test(telephone) || motDePasse.length < 6) {
-      setFeedback(
-        fb,
-        "Nom complet, téléphone +224 (8 ou 9 chiffres) et mot de passe (min 6 caractères) requis.",
-        true
-      );
-      return;
-    }
+    const statusBox =
+      document.getElementById("registerStatus") ||
+      (() => {
+        const p = document.createElement("p");
+        p.id = "registerStatus";
+        p.style.marginTop = "12px";
+        p.style.fontWeight = "600";
+        form.appendChild(p);
+        return p;
+      })();
 
-    setFeedback(fb, "Création du compte en cours...", false);
+    const emailInput = form.querySelector("#regEmail, #email, input[name='email'], input[type='email']");
+    const phoneInput = form.querySelector("#regPhone, #telephone, input[name='telephone'], input[type='tel']");
+    const emailOtpInput = form.querySelector("#emailOtpCode, input[name='emailOtp']");
+    const phoneOtpInput = form.querySelector("#phoneOtpCode, input[name='phoneOtp']");
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom_complet: nomComplet,
-          telephone,
-          email,
-          role,
-          ville,
-          quartier,
-          type_piece: typePiece,
-          numero_piece: numeroPiece,
-          date_expiration: dateExpiration,
-          ref_atelier: refAtelier,
-          mot_de_passe: motDePasse,
-          email_verifie: emailVerified,
-          telephone_verifie: smsVerified,
-          selfie_data_url: selfieDataUrl
-        })
-      });
+    const sendEmailOtpBtn = document.getElementById("sendEmailOtpBtn");
+    const verifyEmailOtpBtn = document.getElementById("verifyEmailOtpBtn");
+    const sendPhoneOtpBtn = document.getElementById("sendPhoneOtpBtn");
+    const verifyPhoneOtpBtn = document.getElementById("verifyPhoneOtpBtn");
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || data.message || "Erreur lors de l'inscription.");
-      }
-
-      if (data.user) {
-        saveSession(data.token || "", data.user);
-        syncHeaderUI();
-      }
-
-      setFeedback(fb, "Compte créé avec succès ! Redirection vers votre profil...", false);
-      setTimeout(() => {
-        window.location.href = "./profil.html";
-      }, 700);
-    } catch (err) {
-      setFeedback(fb, `Erreur d'inscription : ${err.message}`, true);
-    }
-  });
-}
-
-function bindKycForm() {
-  const kycForm = document.getElementById("kycForm");
-  if (!kycForm) return;
-
-  const kycStatus = document.getElementById("kycStatus");
-  const phoneInput = document.getElementById("phone");
-  if (phoneInput) {
-    phoneInput.addEventListener("blur", () => {
-      const normalized = normalizeGuineaPhone(phoneInput.value);
-      if (normalized) phoneInput.value = normalized;
-    });
-  }
-
-  kycForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const fullName = (document.getElementById("fullName")?.value || "").trim();
-    const phone = normalizeGuineaPhone(document.getElementById("phone")?.value || "");
-    const role = document.getElementById("role")?.value || "client";
-    const idNumber = (document.getElementById("idNumber")?.value || "").trim();
-    const selfieFile = document.getElementById("kycSelfie")?.files?.[0];
-
-    if (!fullName || !/^\+224\d{8,9}$/.test(phone) || !idNumber || !selfieFile) {
-      showStatus(
-        kycStatus,
-        "Veuillez remplir tous les champs (téléphone +224 à 8 ou 9 chiffres) et joindre le selfie KYC.",
-        "error"
-      );
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("fullName", fullName);
-    formData.append("full_name", fullName);
-    formData.append("phone", phone);
-    formData.append("role", role);
-    formData.append("idNumber", idNumber);
-    formData.append("id_number", idNumber);
-    formData.append("kycSelfie", selfieFile);
-
-    showStatus(kycStatus, "Envoi du dossier KYC en cours...", "info");
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        body: formData
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.error || data.message || "Erreur lors de l'inscription.");
-      }
-      if (data.user) {
-        saveSession(data.token || "", data.user);
-        syncHeaderUI();
-      }
-      showStatus(kycStatus, "Inscription et dossier KYC envoyés avec succès !", "success");
-    } catch (err) {
-      showStatus(kycStatus, `Erreur lors de la soumission : ${err.message}`, "error");
-    }
-  });
-}
-
-async function initProfilePage() {
-  const container = document.querySelector("[data-profile-info]") || document.getElementById("profilInfo");
-  if (!container) return;
-
-  const cachedUser = getStoredUser();
-  if (!cachedUser && !getStoredToken()) {
-    container.innerHTML = `
-      <p>Vous n'êtes pas connecté.</p>
-      <div class="hero-actions">
-        <a href="connexion.html" class="btn-primary">Se connecter</a>
-        <a href="inscription.html" class="btn-secondary">Créer un compte</a>
-      </div>
-    `;
-    return;
-  }
-
-  let profile = cachedUser;
-  try {
-    const res = await fetch(`${API_BASE_URL}/profil`, {
-      headers: getAuthHeaders()
-    });
-    if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      if (data.user) {
-        profile = data.user;
-        saveSession(getStoredToken(), profile);
-        syncHeaderUI();
-      }
-    }
-  } catch (_) {
-    // Utilise le cache local
-  }
-
-  if (!profile) return;
-
-  container.innerHTML = `
-    <div class="cards-grid">
-      <div class="kyc-box">
-        <strong>Nom complet :</strong> ${profile.nom_complet || "—"}<br />
-        <strong>Rôle :</strong> ${profile.role || "—"}<br />
-        <strong>Statut KYC :</strong> <span class="status-badge">${profile.statut_kyc || "en_attente"}</span><br />
-        <strong>E-mail vérifié :</strong> ${profile.email_verifie ? "Oui" : "En attente"}<br />
-        <strong>SMS +224 vérifié :</strong> ${profile.telephone_verifie ? "Oui" : "En attente"}
-      </div>
-      <div class="kyc-box">
-        <strong>Téléphone :</strong> ${profile.telephone || "—"}<br />
-        <strong>E-mail :</strong> ${profile.email || "—"}<br />
-        <strong>Localisation :</strong> ${profile.ville || "Conakry"}${profile.quartier ? ` — ${profile.quartier}` : ""}
-      </div>
-    </div>
-  `;
-}
-
-async function updateDemandeStatus(demandeId, statut, onDone = null) {
-  try {
-    const res = await fetch(`${API_BASE_URL}/demandes/${demandeId}/statut`, {
-      method: "POST",
-      headers: getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ statut })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || "Impossible de mettre à jour la demande.");
-    }
-    if (typeof onDone === "function") {
-      await onDone();
-    }
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
-async function initDemandesPage() {
-  const listEl = document.getElementById("demandesList") || document.querySelector("[data-demandes-list]");
-  if (!listEl) return;
-
-  const user = getStoredUser();
-  const isMecanicien = user?.role === "mecanicien" || user?.role === "admin";
-
-  listEl.innerHTML = `<p class="kyc-hint">Chargement des demandes...</p>`;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/demandes`, {
-      headers: getAuthHeaders()
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      listEl.innerHTML = `<p class="kyc-hint">${data.error || "Connectez-vous pour consulter les demandes."}</p>`;
-      return;
-    }
-
-    const demandes = Array.isArray(data.demandes) ? data.demandes : [];
-    if (!demandes.length) {
-      listEl.innerHTML = `<p class="kyc-hint">Aucune demande d'intervention pour le moment.</p>`;
-      return;
-    }
-
-    listEl.innerHTML = "";
-    demandes.forEach((d) => {
-      const card = document.createElement("article");
-      card.className = "demande-card";
-
-      const actionButtons = isMecanicien
-        ? `
-          <div class="kyc-actions">
-            <button type="button" class="btn-primary" data-action="accept" data-id="${d.id}">Accepter</button>
-            <button type="button" class="btn-secondary" data-action="complete" data-id="${d.id}">Terminer</button>
-          </div>
-        `
-        : `
-          <div class="kyc-actions">
-            <a href="paiement.html" class="btn-pay" onclick="localStorage.setItem('mecaconnect_derniere_intervention', ${JSON.stringify(d.reference_code || d.type_panne || "Intervention")}); localStorage.setItem('mecaconnect_dernier_montant_gnf', '${Number(d.montant_estime_gnf || 150000)}');">Payer en GNF</a>
-          </div>
-        `;
-
-      card.innerHTML = `
-        <div class="card-header">
-          <strong>${d.reference_code || `#${d.id}`} — ${d.type_panne || "Intervention"}</strong>
-          <span class="status-badge">${d.statut || "en_attente"}</span>
-        </div>
-        <p><strong>Localisation :</strong> ${d.localisation || "Guinée"}</p>
-        <p><strong>Montant estimé :</strong> ${formatGnf(d.montant_estime_gnf)}</p>
-        ${d.description ? `<p>${d.description}</p>` : ""}
-        ${actionButtons}
-      `;
-
-      card.querySelector('[data-action="accept"]')?.addEventListener("click", () => {
-        updateDemandeStatus(d.id, "acceptee", initDemandesPage);
-      });
-      card.querySelector('[data-action="complete"]')?.addEventListener("click", () => {
-        updateDemandeStatus(d.id, "terminee", initDemandesPage);
-      });
-
-      listEl.appendChild(card);
-    });
-  } catch (err) {
-    listEl.innerHTML = `<p class="kyc-hint">Erreur de chargement : ${err.message}</p>`;
-  }
-}
-
-async function initAdminPage() {
-  const usersBody = document.getElementById("adminUsersTableBody");
-  const demandesBody = document.getElementById("adminDemandesTableBody");
-  const paiementsBody = document.getElementById("adminPaiementsTableBody");
-  if (!usersBody && !demandesBody && !paiementsBody) return;
-
-  let allUsers = [];
-
-  const renderUsers = (filterText = "") => {
-    if (!usersBody) return;
-    const q = filterText.trim().toLowerCase();
-    const filtered = !q
-      ? allUsers
-      : allUsers.filter((u) =>
-          [u.nom_complet, u.email, u.telephone, u.role, u.numero_document, u.specialite, u.ville]
-            .filter(Boolean)
-            .some((val) => String(val).toLowerCase().includes(q))
-        );
-
-    if (!filtered.length) {
-      usersBody.innerHTML = `<tr><td colspan="7">Aucun utilisateur trouvé.</td></tr>`;
-      return;
-    }
-
-    usersBody.innerHTML = filtered
-      .map(
-        (u) => `
-        <tr>
-          <td>${u.id}</td>
-          <td><strong>${u.nom_complet || "—"}</strong><br /><small>${u.role || "—"}</small></td>
-          <td>${u.telephone || "—"} ${u.telephone_verifie ? "✓" : ""}<br /><small>${u.email || ""} ${u.email_verifie ? "✓" : ""}</small></td>
-          <td>${u.numero_document ? `${u.type_document || "Pièce"} : ${u.numero_document}` : "Non renseignée"}</td>
-          <td>${u.specialite || u.ville || "—"}</td>
-          <td><span class="status-badge">${u.statut_kyc || "en_attente"}</span></td>
-          <td>${u.actif === false ? "Inactif" : "Actif"}</td>
-        </tr>
-      `
-      )
-      .join("");
-  };
-
-  const loadOverview = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/overview`, {
-        headers: getAuthHeaders()
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (usersBody) {
-          usersBody.innerHTML = `<tr><td colspan="7">${data.error || "Accès administrateur requis."}</td></tr>`;
+    if (sendEmailOtpBtn && emailInput) {
+      sendEmailOtpBtn.addEventListener("click", async () => {
+        const email = emailInput.value.trim().toLowerCase();
+        if (!email || !email.includes("@")) {
+          setStatusMessage(statusBox, "Saisissez une adresse e-mail valide avant l'envoi du code.", "error");
+          return;
         }
+        try {
+          setStatusMessage(statusBox, "Envoi du code OTP e-mail...", "info");
+          const res = await apiRequest("/auth/send-otp", {
+            method: "POST",
+            body: JSON.stringify({ channel: "email", target: email })
+          });
+          const devHint = res.dev_code ? ` (Code test : ${res.dev_code})` : "";
+          setStatusMessage(statusBox, `Code OTP envoyé à ${email}.${devHint}`, "success");
+        } catch (err) {
+          setStatusMessage(statusBox, err.message, "error");
+        }
+      });
+    }
+
+    if (verifyEmailOtpBtn && emailInput && emailOtpInput) {
+      verifyEmailOtpBtn.addEventListener("click", async () => {
+        const email = emailInput.value.trim().toLowerCase();
+        const code = emailOtpInput.value.trim();
+        if (!code) {
+          setStatusMessage(statusBox, "Entrez le code OTP reçu par e-mail.", "error");
+          return;
+        }
+        try {
+          await apiRequest("/auth/verify-otp", {
+            method: "POST",
+            body: JSON.stringify({ channel: "email", target: email, code })
+          });
+          otpState.emailVerified = true;
+          setStatusMessage(statusBox, "Adresse e-mail vérifiée avec succès.", "success");
+        } catch (err) {
+          otpState.emailVerified = false;
+          setStatusMessage(statusBox, err.message, "error");
+        }
+      });
+    }
+
+    if (sendPhoneOtpBtn && phoneInput) {
+      sendPhoneOtpBtn.addEventListener("click", async () => {
+        const phone = normalizeGuineaPhone(phoneInput.value);
+        phoneInput.value = phone;
+        if (!isValidGuineaPhone(phone)) {
+          setStatusMessage(
+            statusBox,
+            "Numéro guinéen invalide. Utilisez le format +2246XXXXXXXX.",
+            "error"
+          );
+          return;
+        }
+        try {
+          setStatusMessage(statusBox, "Envoi du SMS OTP (+224)...", "info");
+          const res = await apiRequest("/auth/send-otp", {
+            method: "POST",
+            body: JSON.stringify({ channel: "sms", target: phone })
+          });
+          const devHint = res.dev_code ? ` (Code SMS test : ${res.dev_code})` : "";
+          setStatusMessage(statusBox, `Code SMS envoyé au ${phone}.${devHint}`, "success");
+        } catch (err) {
+          setStatusMessage(statusBox, err.message, "error");
+        }
+      });
+    }
+
+    if (verifyPhoneOtpBtn && phoneInput && phoneOtpInput) {
+      verifyPhoneOtpBtn.addEventListener("click", async () => {
+        const phone = normalizeGuineaPhone(phoneInput.value);
+        const code = phoneOtpInput.value.trim();
+        if (!code) {
+          setStatusMessage(statusBox, "Entrez le code OTP reçu par SMS.", "error");
+          return;
+        }
+        try {
+          await apiRequest("/auth/verify-otp", {
+            method: "POST",
+            body: JSON.stringify({ channel: "sms", target: phone, code })
+          });
+          otpState.phoneVerified = true;
+          setStatusMessage(statusBox, "Numéro +224 vérifié avec succès.", "success");
+        } catch (err) {
+          otpState.phoneVerified = false;
+          setStatusMessage(statusBox, err.message, "error");
+        }
+      });
+    }
+
+    // Gestion caméra selfie KYC en direct
+    const startCameraBtn = document.getElementById("startCameraBtn");
+    const captureSelfieBtn = document.getElementById("captureSelfieBtn");
+    const videoEl = document.getElementById("kycVideo");
+    const canvasEl = document.getElementById("kycCanvas");
+    const selfiePreview = document.getElementById("selfiePreview");
+    let mediaStream = null;
+
+    if (startCameraBtn && videoEl) {
+      startCameraBtn.addEventListener("click", async () => {
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user" },
+            audio: false
+          });
+          videoEl.srcObject = mediaStream;
+          videoEl.style.display = "block";
+          await videoEl.play();
+          setStatusMessage(statusBox, "Caméra activée. Positionnez votre visage puis capturez le selfie.", "info");
+        } catch (err) {
+          setStatusMessage(
+            statusBox,
+            `Impossible d'accéder à la caméra : ${err.message}`,
+            "error"
+          );
+        }
+      });
+    }
+
+    if (captureSelfieBtn && videoEl && canvasEl) {
+      captureSelfieBtn.addEventListener("click", () => {
+        if (!videoEl.videoWidth) {
+          setStatusMessage(statusBox, "Activez d'abord la caméra avant de prendre le selfie.", "error");
+          return;
+        }
+        canvasEl.width = videoEl.videoWidth;
+        canvasEl.height = videoEl.videoHeight;
+        const ctx = canvasEl.getContext("2d");
+        ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+        otpState.selfieDataUrl = canvasEl.toDataURL("image/jpeg", 0.85);
+
+        if (selfiePreview) {
+          selfiePreview.src = otpState.selfieDataUrl;
+          selfiePreview.style.display = "block";
+        }
+        if (mediaStream) {
+          mediaStream.getTracks().forEach((track) => track.stop());
+          mediaStream = null;
+        }
+        setStatusMessage(statusBox, "Selfie KYC capturé avec succès.", "success");
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nom = (form.querySelector("#regNom, input[name='nom']")?.value || "").trim();
+      const email = (emailInput?.value || "").trim().toLowerCase();
+      const telephone = normalizeGuineaPhone(phoneInput?.value || "");
+      const role = form.querySelector("#regRole, select[name='role']")?.value || "chauffeur";
+      const ville = (form.querySelector("#regVille, select[name='ville'], input[name='ville']")?.value || "Conakry").trim();
+      const specialite = (form.querySelector("#regSpecialite, input[name='specialite']")?.value || "").trim();
+      const numeroPiece = (form.querySelector("#regPiece, input[name='numero_piece']")?.value || "").trim();
+      const password = form.querySelector("#regPassword, input[name='password']")?.value || "";
+
+      if (!nom || !email || !telephone || !password) {
+        setStatusMessage(statusBox, "Veuillez remplir tous les champs obligatoires.", "error");
         return;
       }
 
-      const stats = data.stats || {};
-      const elTotalUsers = document.getElementById("statTotalUsers");
-      const elUsersSplit = document.getElementById("statUsersSplit");
-      const elTotalDemandes = document.getElementById("statTotalDemandes");
-      const elDemandesPending = document.getElementById("statDemandesPending");
-      const elTotalRevenus = document.getElementById("statTotalRevenus");
-
-      if (elTotalUsers) elTotalUsers.textContent = String(stats.total_users ?? 0);
-      if (elUsersSplit) {
-        elUsersSplit.textContent = `${stats.chauffeurs ?? 0} chauffeurs · ${stats.mecaniciens ?? 0} mécaniciens`;
-      }
-      if (elTotalDemandes) elTotalDemandes.textContent = String(stats.total_demandes ?? 0);
-      if (elDemandesPending) elDemandesPending.textContent = `${stats.pending_demandes ?? 0} en attente`;
-      if (elTotalRevenus) {
-        elTotalRevenus.textContent = stats.total_revenus_formate || formatGnf(stats.total_revenus_gnf || 0);
+      if (!isValidGuineaPhone(telephone)) {
+        setStatusMessage(statusBox, "Le téléphone doit être un numéro guinéen (+2246XXXXXXXX).", "error");
+        return;
       }
 
-      allUsers = Array.isArray(data.users) ? data.users : [];
-      renderUsers(document.getElementById("adminUserSearch")?.value || "");
+      if (emailOtpInput && !otpState.emailVerified) {
+        setStatusMessage(statusBox, "Veuillez valider le code OTP e-mail avant de créer le compte.", "error");
+        return;
+      }
 
-      if (demandesBody) {
-        const demandes = Array.isArray(data.demandes) ? data.demandes : [];
-        demandesBody.innerHTML = demandes.length
-          ? demandes
-              .map(
-                (d) => `
-                <tr>
-                  <td>${d.reference_code || d.id}</td>
-                  <td>${d.client_nom || d.client_id || "—"}</td>
-                  <td>${d.type_panne || "—"}</td>
-                  <td>${d.localisation || "—"}</td>
-                  <td>${formatGnf(d.montant_estime_gnf)}</td>
-                  <td><span class="status-badge">${d.statut || "en_attente"}</span></td>
-                  <td>
-                    <button type="button" class="btn-secondary" data-admin-complete="${d.id}">Terminer</button>
-                  </td>
-                </tr>
-              `
-              )
-              .join("")
-          : `<tr><td colspan="7">Aucune demande enregistrée.</td></tr>`;
+      if (phoneOtpInput && !otpState.phoneVerified) {
+        setStatusMessage(statusBox, "Veuillez valider le code OTP SMS (+224) avant de créer le compte.", "error");
+        return;
+      }
 
-        demandesBody.querySelectorAll("[data-admin-complete]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            updateDemandeStatus(btn.getAttribute("data-admin-complete"), "terminee", loadOverview);
+      if ((videoEl || startCameraBtn) && !otpState.selfieDataUrl) {
+        setStatusMessage(statusBox, "La capture du selfie KYC en direct est obligatoire.", "error");
+        return;
+      }
+
+      try {
+        setStatusMessage(statusBox, "Création du compte et validation KYC...", "info");
+        const res = await apiRequest("/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            nom,
+            email,
+            telephone,
+            role,
+            ville,
+            specialite,
+            numero_piece: numeroPiece,
+            password,
+            email_verified: otpState.emailVerified,
+            phone_verified: otpState.phoneVerified,
+            selfie_data: otpState.selfieDataUrl
+          })
+        });
+
+        const user = res.user || res.utilisateur || res;
+        saveSession(user, res.token || user.token || "");
+        setStatusMessage(statusBox, "Compte créé avec succès ! Redirection vers votre profil...", "success");
+        window.location.href = "profil.html";
+      } catch (err) {
+        setStatusMessage(statusBox, `Échec de l'inscription : ${err.message}`, "error");
+      }
+    });
+  }
+
+  // Page profil (profil.html)
+  function initProfilePage() {
+    if (getCurrentPage() !== "profil.html") return;
+    const user = getStoredUser();
+    if (!user) return;
+
+    const fieldMap = {
+      profileName: user.nom || "Utilisateur",
+      profileEmail: user.email || "-",
+      profilePhone: user.telephone || "-",
+      profileRole: (user.role || "chauffeur").toUpperCase(),
+      profileCity: user.ville || "Conakry",
+      profileKycStatus: user.kyc_status || "Vérifié"
+    };
+
+    Object.entries(fieldMap).forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    });
+
+    const selfieImg = document.getElementById("profileSelfie");
+    if (selfieImg && user.selfie_data) {
+      selfieImg.src = user.selfie_data;
+      selfieImg.style.display = "block";
+    }
+  }
+
+  // Page chauffeur (chauffeur.html)
+  function initDriverPage() {
+    if (getCurrentPage() !== "chauffeur.html") return;
+    const form = document.getElementById("breakdownForm") || document.querySelector("form");
+    const listContainer = document.getElementById("driverRequestsList");
+    const user = getStoredUser();
+
+    async function loadDriverRequests() {
+      if (!listContainer) return;
+      try {
+        const data = await apiRequest("/interventions");
+        const items = Array.isArray(data) ? data : data.interventions || [];
+        if (!items.length) {
+          listContainer.innerHTML = "<p>Aucune demande d'intervention enregistrée.</p>";
+          return;
+        }
+        listContainer.innerHTML = items
+          .map(
+            (item) => `
+            <div class="card" style="margin-bottom:12px;">
+              <strong>${escapeHtml(item.type_panne || item.titre || "Dépannage")}</strong>
+              <p>Lieu : ${escapeHtml(item.localisation || item.ville || "Conakry")} — Montant : ${formatGnf(item.montant_gnf)}</p>
+              <p>Statut : <strong>${escapeHtml(item.statut || "en_attente")}</strong></p>
+            </div>`
+          )
+          .join("");
+      } catch (err) {
+        listContainer.innerHTML = `<p style="color:#dc2626;">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    if (form) {
+      const statusBox = document.getElementById("driverStatus") || document.createElement("p");
+      if (!statusBox.id) {
+        statusBox.id = "driverStatus";
+        form.appendChild(statusBox);
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const typePanne = (form.querySelector("#typePanne, input[name='type_panne'], select[name='type_panne']")?.value || "Panne mécanique").trim();
+        const localisation = (form.querySelector("#localisation, input[name='localisation']")?.value || "Conakry").trim();
+        const description = (form.querySelector("#descriptionPanne, textarea[name='description']")?.value || "").trim();
+        const montantGnf = Number(form.querySelector("#amountGnf, input[name='montant_gnf']")?.value || 150000);
+
+        try {
+          setStatusMessage(statusBox, "Envoi de la demande SOS...", "info");
+          await apiRequest("/interventions", {
+            method: "POST",
+            body: JSON.stringify({
+              chauffeur_id: user?.id,
+              chauffeur_nom: user?.nom,
+              type_panne: typePanne,
+              localisation,
+              description,
+              montant_gnf: montantGnf
+            })
+          });
+          setStatusMessage(statusBox, "Demande d'intervention envoyée aux mécaniciens proches.", "success");
+          form.reset();
+          loadDriverRequests();
+        } catch (err) {
+          setStatusMessage(statusBox, err.message, "error");
+        }
+      });
+    }
+
+    loadDriverRequests();
+  }
+
+  // Page mécanicien (mecanicien.html)
+  function initMechanicPage() {
+    if (getCurrentPage() !== "mecanicien.html") return;
+    const container = document.getElementById("mechanicMissionsList") || document.querySelector(".missions-list");
+    const user = getStoredUser();
+
+    async function loadMissions() {
+      if (!container) return;
+      try {
+        const data = await apiRequest("/interventions");
+        const items = Array.isArray(data) ? data : data.interventions || [];
+        if (!items.length) {
+          container.innerHTML = "<p>Aucune mission disponible pour le moment.</p>";
+          return;
+        }
+        container.innerHTML = items
+          .map(
+            (item) => `
+            <div class="card" style="margin-bottom:12px;">
+              <h4>${escapeHtml(item.type_panne || "Intervention")} — ${escapeHtml(item.localisation || "Guinée")}</h4>
+              <p>${escapeHtml(item.description || "Assistance demandée")}</p>
+              <p>Tarif : <strong>${formatGnf(item.montant_gnf)}</strong> | Statut : <strong>${escapeHtml(item.statut || "en_attente")}</strong></p>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button type="button" class="btn btn-primary" data-mission-id="${item.id}" data-next-status="acceptee">Accepter</button>
+                <button type="button" class="btn btn-secondary" data-mission-id="${item.id}" data-next-status="terminee">Terminer</button>
+              </div>
+            </div>`
+          )
+          .join("");
+
+        container.querySelectorAll("button[data-mission-id]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-mission-id");
+            const statut = btn.getAttribute("data-next-status");
+            try {
+              await apiRequest(`/interventions/${id}/status`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                  statut,
+                  mecanicien_id: user?.id,
+                  mecanicien_nom: user?.nom
+                })
+              });
+              loadMissions();
+            } catch (err) {
+              alert(err.message);
+            }
           });
         });
-      }
-
-      if (paiementsBody) {
-        const paiements = Array.isArray(data.paiements) ? data.paiements : [];
-        paiementsBody.innerHTML = paiements.length
-          ? paiements
-              .map(
-                (p) => `
-                <tr>
-                  <td>${p.id}</td>
-                  <td>${p.demande_ref || p.demande_id || p.reference_paiement || "—"}</td>
-                  <td>${formatGnf(p.montant_gnf)}</td>
-                  <td>${p.operateur || "Orange Money"}</td>
-                  <td><span class="status-badge">${p.statut || "confirme"}</span></td>
-                  <td>${p.cree_le ? new Date(p.cree_le).toLocaleDateString("fr-FR") : "—"}</td>
-                </tr>
-              `
-              )
-              .join("")
-          : `<tr><td colspan="6">Aucun paiement enregistré.</td></tr>`;
-      }
-    } catch (err) {
-      if (usersBody) {
-        usersBody.innerHTML = `<tr><td colspan="7">Erreur : ${err.message}</td></tr>`;
+      } catch (err) {
+        container.innerHTML = `<p style="color:#dc2626;">${escapeHtml(err.message)}</p>`;
       }
     }
-  };
 
-  document.getElementById("adminUserSearch")?.addEventListener("input", (e) => {
-    renderUsers(e.target.value);
+    loadMissions();
+  }
+
+  // Page paiement GNF (paiement.html)
+  function initPaymentPage() {
+    if (getCurrentPage() !== "paiement.html") return;
+    const form = document.getElementById("paymentForm") || document.querySelector("form");
+    const historyContainer = document.getElementById("paymentsHistoryList");
+    const user = getStoredUser();
+
+    async function loadPayments() {
+      if (!historyContainer) return;
+      try {
+        const data = await apiRequest("/payments");
+        const payments = Array.isArray(data) ? data : data.payments || [];
+        if (!payments.length) {
+          historyContainer.innerHTML = "<p>Aucune transaction GNF enregistrée.</p>";
+          return;
+        }
+        historyContainer.innerHTML = payments
+          .map(
+            (p) => `
+            <div class="card" style="margin-bottom:10px;">
+              <strong>${formatGnf(p.montant_gnf)}</strong> — ${escapeHtml(p.operateur || "Orange Money")} (${escapeHtml(p.telephone || "")})
+              <div>Statut : <strong>${escapeHtml(p.statut || "confirme")}</strong></div>
+            </div>`
+          )
+          .join("");
+      } catch (err) {
+        historyContainer.innerHTML = `<p style="color:#dc2626;">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    if (form) {
+      const statusBox = document.getElementById("paymentStatus") || document.createElement("p");
+      if (!statusBox.id) {
+        statusBox.id = "paymentStatus";
+        form.appendChild(statusBox);
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const montantGnf = Number(form.querySelector("#amountGnf, input[name='montant_gnf']")?.value || 0);
+        const operateur = form.querySelector("#operateur, select[name='operateur']")?.value || "Orange Money Guinée";
+        const telephone = normalizeGuineaPhone(
+          form.querySelector("#payPhone, input[name='telephone']")?.value || user?.telephone || ""
+        );
+
+        if (montantGnf <= 0) {
+          setStatusMessage(statusBox, "Veuillez saisir un montant valide en GNF.", "error");
+          return;
+        }
+        if (!isValidGuineaPhone(telephone)) {
+          setStatusMessage(statusBox, "Numéro mobile money guinéen invalide (+2246XXXXXXXX).", "error");
+          return;
+        }
+
+        try {
+          setStatusMessage(statusBox, "Traitement du paiement mobile en cours...", "info");
+          await apiRequest("/payments", {
+            method: "POST",
+            body: JSON.stringify({
+              user_id: user?.id,
+              montant_gnf: montantGnf,
+              operateur,
+              telephone
+            })
+          });
+          setStatusMessage(statusBox, `Paiement de ${formatGnf(montantGnf)} confirmé via ${operateur}.`, "success");
+          loadPayments();
+        } catch (err) {
+          setStatusMessage(statusBox, err.message, "error");
+        }
+      });
+    }
+
+    loadPayments();
+  }
+
+  // Page administration (admin.html)
+  async function initAdminPage() {
+    if (getCurrentPage() !== "admin.html") return;
+    const statusBox = document.getElementById("adminStatus");
+
+    try {
+      const data = await apiRequest("/admin/overview");
+      const users = data.users || data.utilisateurs || [];
+      const interventions = data.interventions || [];
+      const payments = data.payments || data.paiements || [];
+
+      const totalUsersEl = document.getElementById("statUsers") || document.getElementById("totalUsersCount");
+      const totalInterventionsEl =
+        document.getElementById("statInterventions") || document.getElementById("totalInterventionsCount");
+      const totalRevenueEl =
+        document.getElementById("statRevenue") || document.getElementById("totalRevenueGnf");
+
+      if (totalUsersEl) totalUsersEl.textContent = String(users.length);
+      if (totalInterventionsEl) totalInterventionsEl.textContent = String(interventions.length);
+      if (totalRevenueEl) {
+        const sumGnf = payments.reduce((acc, item) => acc + Number(item.montant_gnf || 0), 0);
+        totalRevenueEl.textContent = formatGnf(sumGnf);
+      }
+
+      const usersBody = document.getElementById("adminUsersTableBody");
+      if (usersBody) {
+        usersBody.innerHTML = users
+          .map(
+            (u) => `
+            <tr>
+              <td>${escapeHtml(u.nom || "-")}</td>
+              <td>${escapeHtml(u.email || "-")}</td>
+              <td>${escapeHtml(u.telephone || "-")}</td>
+              <td>${escapeHtml(u.role || "-")}</td>
+              <td>${escapeHtml(u.ville || "Conakry")}</td>
+              <td>${escapeHtml(u.kyc_status || "Vérifié")}</td>
+            </tr>`
+          )
+          .join("");
+      }
+
+      const interventionsBody = document.getElementById("adminInterventionsTableBody");
+      if (interventionsBody) {
+        interventionsBody.innerHTML = interventions
+          .map(
+            (i) => `
+            <tr>
+              <td>${escapeHtml(i.type_panne || "-")}</td>
+              <td>${escapeHtml(i.localisation || "-")}</td>
+              <td>${formatGnf(i.montant_gnf)}</td>
+              <td>${escapeHtml(i.statut || "en_attente")}</td>
+            </tr>`
+          )
+          .join("");
+      }
+
+      const paymentsBody = document.getElementById("adminPaymentsTableBody");
+      if (paymentsBody) {
+        paymentsBody.innerHTML = payments
+          .map(
+            (p) => `
+            <tr>
+              <td>${escapeHtml(p.operateur || "-")}</td>
+              <td>${escapeHtml(p.telephone || "-")}</td>
+              <td>${formatGnf(p.montant_gnf)}</td>
+              <td>${escapeHtml(p.statut || "confirme")}</td>
+            </tr>`
+          )
+          .join("");
+      }
+    } catch (err) {
+      if (statusBox) {
+        setStatusMessage(statusBox, `Erreur chargement supervision : ${err.message}`, "error");
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    updateNavigationUI();
+    initAmountFormatter();
+    initLoginPage();
+    initRegisterPage();
+    initProfilePage();
+    initDriverPage();
+    initMechanicPage();
+    initPaymentPage();
+    initAdminPage();
   });
-  document.getElementById("refreshAdminBtn")?.addEventListener("click", loadOverview);
-
-  await loadOverview();
-}
-
-function bindHelpers() {
-  const testApiBtn = document.getElementById("btnTestApi");
-  const loginStatus = document.getElementById("loginStatus");
-  if (testApiBtn) {
-    testApiBtn.addEventListener("click", async () => {
-      showStatus(loginStatus, "Test de connexion à l'API en cours...", "info");
-      await checkApiHealth(loginStatus);
-    });
-  }
-
-  const amountInput = document.getElementById("amountGnf");
-  const formattedAmount = document.getElementById("formattedAmount");
-  if (amountInput && formattedAmount) {
-    const updateDisplay = () => {
-      formattedAmount.textContent = `Montant formaté : ${formatGnf(amountInput.value)}`;
-    };
-    amountInput.addEventListener("input", updateDisplay);
-    updateDisplay();
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.body.classList.add("page-loaded");
-  syncHeaderUI();
-  bindLogout();
-  bindLoginForms();
-  bindInscriptionForm();
-  bindKycForm();
-  bindHelpers();
-  initProfilePage();
-  initDemandesPage();
-  initAdminPage();
-  refreshNotificationsBadge();
-  checkApiHealth();
-});
+})();
