@@ -3,24 +3,29 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Notifications — MecaConnect Guinée</title>
+    <title>Notifications — MécaConnect Guinée</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <header class="topbar">
+    <header class="topbar topbar-light">
         <div class="topbar-brand">
             <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
         </div>
         <div class="topbar-actions">
+            <span class="gn-pill">🇬🇳 GN</span>
+            <span id="apiStatusBadge" class="api-badge">Vérification API...</span>
             <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
-            <a href="notifications.html" class="btn-notif">
-                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
-            </a>
-            <a href="connexion.html" class="auth-guest-only" data-auth-login>Connexion</a>
-            <a href="inscription.html" class="btn-primary auth-guest-only" data-auth-login>Inscription</a>
-            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+            <a href="notifications.html" class="btn-notif">🔔 Notifications <span class="notif-badge" data-notif-badge>0</span></a>
+            <button type="button" id="logoutBtn" class="btn-logout hidden" data-auth-logout>Déconnexion</button>
         </div>
     </header>
+
+    <div class="sub-nav-bar">
+        <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
+        <a href="demande.html" class="sub-nav-link">🚨 Demande SOS</a>
+        <a href="mecanicien.html" class="sub-nav-link">🛠️ Missions</a>
+        <a href="notifications.html" class="sub-nav-link active">🔔 Notifications</a>
+    </div>
 
     <div class="app-layout">
         <aside class="sidebar">
@@ -37,22 +42,20 @@
         </aside>
 
         <main class="main-content">
-            <section class="hero-card card">
-                <h1>🔔 Centre de notifications</h1>
-                <p>Alertes liées à vos demandes d'intervention, statuts d'atelier et paiements en GNF.</p>
-            </section>
-
             <section class="card">
-                <div id="notificationsList" class="list-stack" data-notifications-list></div>
+                <div class="page-header">
+                    <div>
+                        <h1>🔔 Centre de notifications</h1>
+                        <p class="kyc-hint">Alertes d'intervention, confirmations de paiement GNF et mises à jour de compte.</p>
+                    </div>
+                    <button type="button" id="clearNotificationsBtn" class="btn-secondary">Marquer tout comme lu</button>
+                </div>
+
+                <div id="notificationsList">
+                    <p class="kyc-hint">Chargement des notifications...</p>
+                </div>
             </section>
         </main>
-    </div>
-
-    <div class="mechanical-stage" aria-hidden="true">
-        <div class="mechanical-track">
-            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
-            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
-        </div>
     </div>
 
     <script src="app.js"></script>

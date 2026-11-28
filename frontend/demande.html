@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Demande d'intervention SOS — MecaConnect Guinée</title>
+    <title>Demande SOS — MécaConnect Guinée</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body class="demande-page">
@@ -11,24 +11,19 @@
         <div class="topbar-brand">
             <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
         </div>
-
         <div class="topbar-actions">
-            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span class="gn-pill">🇬🇳 GN</span>
             <span id="apiStatusBadge" class="api-badge">Vérification API...</span>
             <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
-            <a href="notifications.html" class="btn-notif">
-                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
-            </a>
-            <a href="connexion.html" class="btn-ghost-auth auth-guest-only" data-auth-login>Se connecter</a>
-            <a href="inscription.html" class="btn-cta-orange auth-guest-only">Créer un compte</a>
+            <a href="notifications.html" class="btn-notif">🔔 Notifications <span class="notif-badge" data-notif-badge>0</span></a>
             <button type="button" id="logoutBtn" class="btn-logout hidden" data-auth-logout>Déconnexion</button>
         </div>
     </header>
 
     <div class="sub-nav-bar">
         <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
-        <a href="inscription.html" class="sub-nav-link">🪪 Inscription KYC</a>
-        <a href="connexion.html" class="sub-nav-link">🔐 Connexion</a>
+        <a href="demande.html" class="sub-nav-link active">🚨 Demande SOS</a>
+        <a href="mecanicien.html" class="sub-nav-link">🛠️ Missions</a>
         <a href="paiement.html" class="sub-nav-link">💳 Paiements GNF</a>
     </div>
 
@@ -51,102 +46,55 @@
                 <div class="page-header">
                     <div>
                         <h1>🚨 Nouvelle demande d'intervention (SOS)</h1>
-                        <p class="kyc-hint">
-                            Signalez une panne en République de Guinée (+224) et proposez un budget estimatif en Francs guinéens (GNF).
-                        </p>
+                        <p class="kyc-hint">Signalez une panne en Guinée et proposez un tarif estimatif en GNF.</p>
                     </div>
                     <span class="status-badge">Urgence 24/7</span>
                 </div>
 
                 <form id="breakdownForm" novalidate>
-                    <div class="section-title">1. Nature de la panne &amp; localisation</div>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="typePanne">Type de panne / prestation *</label>
+                            <label for="typePanne">Type de panne *</label>
                             <select id="typePanne" name="type_panne" required>
                                 <option value="Panne batterie / démarrage">🔋 Panne batterie / démarrage</option>
                                 <option value="Crevaison / changement de roue">🛞 Crevaison / changement de roue</option>
                                 <option value="Surchauffe moteur / radiateur">🌡️ Surchauffe moteur / radiateur</option>
                                 <option value="Freinage / embrayage / boîte">🛑 Freinage / embrayage / boîte</option>
-                                <option value="Diagnostic électronique / électricité">⚡ Diagnostic électronique / électricité</option>
-                                <option value="Remorquage / assistance route">🚛 Remorquage / assistance route</option>
+                                <option value="Diagnostic électrique">⚡ Diagnostic électrique</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="localisation">Ville, commune ou quartier *</label>
-                            <input
-                                type="text"
-                                id="localisation"
-                                name="localisation"
-                                placeholder="Ex. Labé — Daka, Conakry — Kipé, Kankan..."
-                                required
-                            />
-                            <span class="kyc-hint">Précisez un repère visible pour faciliter l'arrivée du mécanicien.</span>
+                            <label for="localisation">Ville &amp; quartier *</label>
+                            <input type="text" id="localisation" name="localisation" placeholder="Ex. Labé — Daka ou Conakry — Kipé" required />
                         </div>
 
                         <div class="form-group">
-                            <label for="vehicleInfo">Véhicule concerné (optionnel)</label>
-                            <input
-                                type="text"
-                                id="vehicleInfo"
-                                name="vehicule"
-                                placeholder="Ex. Toyota Corolla / Hilux — Immatriculation GN"
-                            />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="amountGnf">Budget estimé proposé (GNF) *</label>
-                            <input
-                                type="number"
-                                id="amountGnf"
-                                name="montant_gnf"
-                                value="150000"
-                                min="10000"
-                                step="5000"
-                                required
-                            />
+                            <label for="amountGnf">Tarif estimé (GNF) *</label>
+                            <input type="number" id="amountGnf" name="montant_gnf" value="150000" min="10000" step="5000" required />
                             <span id="formattedAmount" class="kyc-hint">Montant formaté : 150 000 GNF</span>
                         </div>
                     </div>
 
                     <div class="form-group" style="margin-top: 14px;">
-                        <label for="descriptionPanne">Description détaillée du problème</label>
-                        <textarea
-                            id="descriptionPanne"
-                            name="description"
-                            rows="3"
-                            placeholder="Décrivez les symptômes (bruit, voyant allumé, fumée, arrêt brutal...)"
-                        ></textarea>
+                        <label for="descriptionPanne">Description du problème</label>
+                        <textarea id="descriptionPanne" name="description" rows="3" placeholder="Décrivez brièvement la panne..."></textarea>
                     </div>
 
                     <div class="hero-actions">
-                        <button type="submit" id="submitDemandeBtn" class="btn-primary">🚨 Envoyer la demande SOS</button>
+                        <button type="submit" class="btn-primary">🚨 Envoyer la demande</button>
                         <button type="reset" class="btn-secondary">Réinitialiser</button>
-                        <a href="paiement.html" class="btn-pay">💳 Aller aux paiements GNF</a>
                     </div>
 
-                    <div id="driverStatus" class="status-box hidden" role="status" aria-live="polite"></div>
+                    <div id="driverStatus" class="status-box hidden"></div>
                 </form>
             </section>
 
             <section class="card">
-                <div class="section-head">
-                    <h2>📋 Mes demandes d'intervention</h2>
-                    <span class="status-badge">Suivi en direct</span>
-                </div>
-                <div id="driverRequestsList">
-                    <p class="kyc-hint">Chargement de vos demandes...</p>
-                </div>
+                <h2>📋 Mes demandes</h2>
+                <div id="driverRequestsList"></div>
             </section>
         </main>
-    </div>
-
-    <div class="mechanical-stage" aria-hidden="true">
-        <div class="mechanical-track">
-            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
-            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
-        </div>
     </div>
 
     <script src="app.js"></script>

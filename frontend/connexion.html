@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Connexion — MecaConnect Guinée</title>
+    <title>Connexion — MécaConnect Guinée</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body class="connexion-page">
@@ -11,22 +11,19 @@
         <div class="topbar-brand">
             <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
         </div>
-
         <div class="topbar-actions">
-            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span class="gn-pill">🇬🇳 GN</span>
             <span id="apiStatusBadge" class="api-badge">Vérification API...</span>
             <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
-            <a href="notifications.html" class="btn-notif">
-                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
-            </a>
-            <a href="inscription.html" class="btn-cta-orange auth-guest-only" data-auth-login>Créer un compte</a>
+            <a href="notifications.html" class="btn-notif">🔔 Notifications <span class="notif-badge" data-notif-badge>0</span></a>
+            <a href="inscription.html" class="btn-cta-orange auth-guest-only">Créer un compte</a>
             <button type="button" id="logoutBtn" class="btn-logout hidden" data-auth-logout>Déconnexion</button>
         </div>
     </header>
 
     <div class="sub-nav-bar">
         <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
-        <a href="inscription.html" class="sub-nav-link">🪪 Inscription KYC</a>
+        <a href="inscription.html" class="sub-nav-link">📝 Inscription</a>
         <a href="connexion.html" class="sub-nav-link active">🔐 Connexion</a>
         <a href="paiement.html" class="sub-nav-link">💳 Paiements GNF</a>
     </div>
@@ -50,45 +47,21 @@
                 <div class="page-header">
                     <div>
                         <h1>🔐 Connexion à MécaConnect</h1>
-                        <p class="kyc-hint">
-                            Accédez à votre espace chauffeur, mécanicien ou administrateur en Guinée (+224).
-                        </p>
+                        <p class="kyc-hint">Accédez à votre espace chauffeur, mécanicien ou administrateur en Guinée (+224).</p>
                     </div>
                 </div>
 
                 <form id="connexionForm" novalidate>
                     <div class="form-group">
                         <label for="loginEmail">Adresse e-mail ou téléphone (+224) *</label>
-                        <input
-                            type="text"
-                            id="loginEmail"
-                            name="email"
-                            placeholder="Ex. mamadou@exemple.gn ou +224620000000"
-                            autocomplete="username"
-                            required
-                        />
+                        <input type="text" id="loginEmail" name="email" placeholder="Ex. mamadou@exemple.gn ou +224620000000" autocomplete="username" required />
                     </div>
 
                     <div class="form-group" style="margin-top: 14px;">
                         <label for="loginPassword">Mot de passe *</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input
-                                type="password"
-                                id="loginPassword"
-                                name="mot_de_passe"
-                                placeholder="Entrez votre mot de passe"
-                                autocomplete="current-password"
-                                required
-                            />
-                            <button
-                                type="button"
-                                id="togglePasswordBtn"
-                                class="btn-secondary"
-                                style="white-space: nowrap;"
-                                aria-label="Afficher ou masquer le mot de passe"
-                            >
-                                👁️
-                            </button>
+                            <input type="password" id="loginPassword" name="mot_de_passe" placeholder="Entrez votre mot de passe" autocomplete="current-password" required />
+                            <button type="button" id="togglePasswordBtn" class="btn-secondary" style="white-space: nowrap;" aria-label="Afficher ou masquer le mot de passe">👁️</button>
                         </div>
                     </div>
 
@@ -96,7 +69,7 @@
 
                     <div class="hero-actions">
                         <button type="submit" id="submitConnexionBtn" class="btn-primary">Se connecter</button>
-                        <a href="inscription.html" class="btn-secondary">Créer un compte KYC</a>
+                        <a href="inscription.html" class="btn-secondary">Créer un compte</a>
                     </div>
                 </form>
             </section>

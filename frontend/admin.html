@@ -3,149 +3,124 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Administration — MecaConnect Guinée</title>
+    <title>Administration — MécaConnect Guinée</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
     <header class="topbar topbar-light">
         <div class="topbar-brand">
-            <a href="index.html" class="logo">🔧 <span>MecaConnect</span> <small>Guinée — Admin</small></a>
+            <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
         </div>
         <div class="topbar-actions">
-            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
-            <span class="user-greeting">Bonjour, <strong data-user-name>Administrateur</strong></span>
-            <a href="notifications.html" class="btn-notif">
-                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
-            </a>
-            <a href="connexion.html" class="auth-guest-only" data-auth-login>Connexion</a>
-            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+            <span class="gn-pill">🇬🇳 GN</span>
+            <span id="apiStatusBadge" class="api-badge">Vérification API...</span>
+            <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
+            <a href="notifications.html" class="btn-notif">🔔 Notifications <span class="notif-badge" data-notif-badge>0</span></a>
+            <button type="button" id="logoutBtn" class="btn-logout hidden" data-auth-logout>Déconnexion</button>
         </div>
     </header>
+
+    <div class="sub-nav-bar">
+        <a href="index.html" class="sub-nav-link">🏠 Accueil</a>
+        <a href="admin.html" class="sub-nav-link active">🛡️ Supervision Admin</a>
+        <a href="paiement.html" class="sub-nav-link">💳 Paiements GNF</a>
+    </div>
 
     <div class="app-layout">
         <aside class="sidebar">
             <nav class="sidebar-nav" aria-label="Menu principal">
                 <a href="index.html" class="nav-item">🏠 <span>Accueil</span></a>
-                <a href="admin.html" class="nav-item active">🛡️ <span>Administration</span></a>
-                <a href="chauffeur.html" class="nav-item">🚗 <span>Espace Chauffeur</span></a>
-                <a href="mecanicien.html" class="nav-item">🛠️ <span>Espace Mécanicien</span></a>
-                <a href="demande.html" class="nav-item">🚨 <span>Nouvelle Demande</span></a>
-                <a href="paiement.html" class="nav-item">💳 <span>Paiements GNF</span></a>
+                <a href="chauffeur.html" class="nav-item">🚗 <span>Chauffeur</span></a>
+                <a href="mecanicien.html" class="nav-item">🛠️ <span>Mécanicien</span></a>
+                <a href="demande.html" class="nav-item">🚨 <span>Demande</span></a>
+                <a href="paiement.html" class="nav-item">💳 <span>Paiement</span></a>
                 <a href="notifications.html" class="nav-item">🔔 <span>Notifications</span></a>
                 <a href="profil.html" class="nav-item">👤 <span>Profil</span></a>
+                <a href="admin.html" class="nav-item active">🛡️ <span>Administration</span></a>
             </nav>
         </aside>
 
         <main class="main-content">
-            <section class="page-header card">
-                <div>
-                    <h1>🛡️ Tableau de bord Administrateur</h1>
-                    <p>Supervision globale MecaConnect — Conakry, Labé et toute la République de Guinée.</p>
+            <section class="card">
+                <div class="page-header">
+                    <div>
+                        <h1>🛡️ Supervision globale MécaConnect Guinée</h1>
+                        <p class="kyc-hint">Suivi des membres, interventions en cours et volumes financiers en GNF.</p>
+                    </div>
+                    <span class="status-badge">Accès Administrateur</span>
                 </div>
-                <button type="button" id="refreshAdminBtn" class="btn-primary">🔄 Actualiser Base</button>
+
+                <div class="form-grid">
+                    <div class="card">
+                        <strong>Comptes inscrits</strong>
+                        <p id="statUsers" style="font-size: 1.4rem; font-weight: 800; margin: 6px 0 0; color: var(--navy);">0</p>
+                    </div>
+                    <div class="card">
+                        <strong>Interventions</strong>
+                        <p id="statInterventions" style="font-size: 1.4rem; font-weight: 800; margin: 6px 0 0; color: var(--navy);">0</p>
+                    </div>
+                    <div class="card">
+                        <strong>Volume paiements (GNF)</strong>
+                        <p id="statRevenue" style="font-size: 1.4rem; font-weight: 800; margin: 6px 0 0; color: var(--orange-dark);">0 GNF</p>
+                    </div>
+                </div>
+
+                <div id="adminStatus" class="status-box hidden"></div>
             </section>
 
-            <section class="admin-stats-grid" id="adminStatsGrid">
-                <article class="stat-card card">
-                    <h3>Utilisateurs inscrits</h3>
-                    <p class="stat-value" id="statTotalUsers">0</p>
-                    <small id="statUsersSplit">0 chauffeurs · 0 mécaniciens</small>
-                </article>
-                <article class="stat-card card">
-                    <h3>Demandes d'intervention</h3>
-                    <p class="stat-value" id="statTotalDemandes">0</p>
-                    <small id="statDemandesPending">0 en attente</small>
-                </article>
-                <article class="stat-card card">
-                    <h3>Volume encaissé (GNF)</h3>
-                    <p class="stat-value" id="statTotalRevenus">0 GNF</p>
-                    <small>Orange Money · MTN MoMo · Espèces</small>
-                </article>
-            </section>
-
-            <section class="card admin-section">
-                <div class="section-head">
-                    <h2>👥 Utilisateurs &amp; Vérification d'identité (Guinée)</h2>
-                    <input
-                        type="text"
-                        id="adminUserSearch"
-                        placeholder="Filtrer par nom, e-mail, rôle, pièce ou atelier..."
-                    />
-                </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
+            <section class="card">
+                <h2>👥 Utilisateurs</h2>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Nom &amp; Rôle</th>
-                                <th>Contact (+224)</th>
-                                <th>Pièce d'identité</th>
-                                <th>Atelier</th>
-                                <th>Statut</th>
-                                <th>Actions</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Nom</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">E-mail</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Téléphone</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Rôle</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Ville</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Statut</th>
                             </tr>
                         </thead>
-                        <tbody id="adminUsersTableBody">
-                            <tr><td colspan="7">Chargement des utilisateurs...</td></tr>
-                        </tbody>
+                        <tbody id="adminUsersTableBody"></tbody>
                     </table>
                 </div>
             </section>
 
-            <section class="card admin-section">
-                <div class="section-head">
-                    <h2>🚨 Supervision des demandes</h2>
-                </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
+            <section class="card">
+                <h2>🚨 Interventions</h2>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
                             <tr>
-                                <th>Réf.</th>
-                                <th>Chauffeur</th>
-                                <th>Véhicule &amp; Panne</th>
-                                <th>Localisation</th>
-                                <th>Montant</th>
-                                <th>Statut</th>
-                                <th>Actions</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Type</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Localisation</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Montant</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Statut</th>
                             </tr>
                         </thead>
-                        <tbody id="adminDemandesTableBody">
-                            <tr><td colspan="7">Chargement des demandes...</td></tr>
-                        </tbody>
+                        <tbody id="adminInterventionsTableBody"></tbody>
                     </table>
                 </div>
             </section>
 
-            <section class="card admin-section">
-                <div class="section-head">
-                    <h2>💳 Transactions &amp; Paiements en GNF</h2>
-                </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
+            <section class="card">
+                <h2>💳 Paiements GNF</h2>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Réf. Demande</th>
-                                <th>Montant (GNF)</th>
-                                <th>Mode de paiement</th>
-                                <th>Statut</th>
-                                <th>Date</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Opérateur</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Téléphone</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Montant</th>
+                                <th style="padding: 8px; border-bottom: 1px solid var(--border);">Statut</th>
                             </tr>
                         </thead>
-                        <tbody id="adminPaiementsTableBody">
-                            <tr><td colspan="6">Chargement des paiements...</td></tr>
-                        </tbody>
+                        <tbody id="adminPaymentsTableBody"></tbody>
                     </table>
                 </div>
             </section>
         </main>
-    </div>
-
-    <div class="mechanical-stage" aria-hidden="true">
-        <div class="mechanical-track">
-            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
-            <span>⚙️</span><span>🔧</span><span>🔩</span><span>🛠️</span><span>🚗</span><span>⚡</span>
-        </div>
     </div>
 
     <script src="app.js"></script>

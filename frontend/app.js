@@ -41,7 +41,7 @@
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch (_) {
-      // Ignore quota errors on large media payloads
+      // Ignore quota errors
     }
   }
 
@@ -89,7 +89,6 @@
     localStorage.removeItem(STORAGE_TOKEN_KEY);
   }
 
-  // Verrouillage immédiat des pages privées pour les visiteurs non connectés
   function enforceRouteAccess() {
     const page = getCurrentPage();
     const loggedIn = isAuthenticated();
@@ -327,7 +326,7 @@
         if (showDetails && statusBox) {
           setStatusMessage(
             statusBox,
-            `API distante non jointe (${err.message}). Mode stockage local actif pour vos tests.`,
+            `API distante non jointe (${err.message}). Mode stockage local actif.`,
             "info"
           );
         }
@@ -490,8 +489,7 @@
       expectedEmailCode: "",
       expectedPhoneCode: "",
       emailVerified: false,
-      phoneVerified: false,
-      selfieDataUrl: ""
+      phoneVerified: false
     };
 
     const statusBox =
@@ -676,72 +674,6 @@
       });
     }
 
-    const startCameraBtn = document.getElementById("startCameraBtn");
-    const captureSelfieBtn =
-      document.getElementById("takeSelfieBtn") || document.getElementById("captureSelfieBtn");
-    const videoEl = document.getElementById("selfieVideo") || document.getElementById("kycVideo");
-    const canvasEl = document.getElementById("kycCanvas");
-    const selfiePreview = document.getElementById("selfiePreview");
-    let mediaStream = null;
-
-    if (startCameraBtn && videoEl) {
-      startCameraBtn.addEventListener("click", async () => {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          setStatusMessage(statusBox, "Caméra non prise en charge sur ce navigateur.", "error");
-          return;
-        }
-        try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user" },
-            audio: false
-          });
-          videoEl.srcObject = mediaStream;
-          videoEl.classList.remove("hidden");
-          videoEl.style.display = "block";
-          await videoEl.play();
-          if (captureSelfieBtn) captureSelfieBtn.disabled = false;
-          setStatusMessage(
-            statusBox,
-            "Caméra activée. Positionnez votre visage puis capturez le selfie.",
-            "info"
-          );
-        } catch (err) {
-          setStatusMessage(
-            statusBox,
-            `Impossible d'accéder à la caméra : ${err.message}`,
-            "error"
-          );
-        }
-      });
-    }
-
-    if (captureSelfieBtn && videoEl) {
-      captureSelfieBtn.addEventListener("click", () => {
-        if (!videoEl.videoWidth) {
-          setStatusMessage(statusBox, "Activez d'abord la caméra avant de prendre le selfie.", "error");
-          return;
-        }
-        const targetCanvas = canvasEl || document.createElement("canvas");
-        targetCanvas.width = videoEl.videoWidth;
-        targetCanvas.height = videoEl.videoHeight;
-        const ctx = targetCanvas.getContext("2d");
-        ctx.drawImage(videoEl, 0, 0, targetCanvas.width, targetCanvas.height);
-        otpState.selfieDataUrl = targetCanvas.toDataURL("image/jpeg", 0.85);
-
-        if (selfiePreview) {
-          selfiePreview.src = otpState.selfieDataUrl;
-          selfiePreview.classList.remove("hidden");
-          selfiePreview.style.display = "block";
-        }
-        if (mediaStream) {
-          mediaStream.getTracks().forEach((track) => track.stop());
-          mediaStream = null;
-        }
-        videoEl.style.display = "none";
-        setStatusMessage(statusBox, "Selfie KYC capturé avec succès.", "success");
-      });
-    }
-
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const nom = (
@@ -762,16 +694,26 @@
           "#refAtelier, #regSpecialite, input[name='ref_atelier'], input[name='specialite']"
         )?.value || ""
       ).trim();
-      const numeroPiece = (
-        form.querySelector("#numeroPiece, #regPiece, input[name='numero_piece']")?.value || ""
-      ).trim();
       const password =
         form.querySelector(
           "#motDePasse, #regPassword, input[name='mot_de_passe'], input[name='password']"
         )?.value || "";
+      const confirmPassword =
+        form.querySelector("#confirmMotDePasse, input[name='confirm_mot_de_passe']")?.value ??
+        password;
 
-      if (!nom || !email || !telephone || !password) {
+      if (!nom || !email || !telephone || !quartier || !password) {
         setStatusMessage(statusBox, "Veuillez remplir tous les champs obligatoires.", "error");
+        return;
+      }
+
+      if (password.length < 6) {
+        setStatusMessage(statusBox, "Le mot de passe doit contenir au moins 6 caractères.", "error");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setStatusMessage(statusBox, "Les deux mots de passe ne correspondent pas.", "error");
         return;
       }
 
@@ -802,15 +744,6 @@
         return;
       }
 
-      if ((videoEl || startCameraBtn) && !otpState.selfieDataUrl) {
-        setStatusMessage(
-          statusBox,
-          "La capture du selfie KYC en direct est obligatoire.",
-          "error"
-        );
-        return;
-      }
-
       const registrationPayload = {
         nom,
         email,
@@ -819,16 +752,14 @@
         ville,
         quartier,
         specialite,
-        numero_piece: numeroPiece,
         password,
         email_verified: otpState.emailVerified,
         phone_verified: otpState.phoneVerified,
-        kyc_status: otpState.selfieDataUrl ? "Vérifié" : "En attente",
-        selfie_data: otpState.selfieDataUrl
+        kyc_status: "Standard (Vérifié SMS & E-mail)"
       };
 
       try {
-        setStatusMessage(statusBox, "Création du compte et validation KYC...", "info");
+        setStatusMessage(statusBox, "Création du compte en cours...", "info");
         const res = await apiRequest(
           "/auth/register",
           {
@@ -856,7 +787,7 @@
         saveSession(localUser, localUser.token);
         setStatusMessage(
           statusBox,
-          "Compte enregistré en mode local. Redirection vers votre profil...",
+          "Compte créé avec succès ! Redirection vers votre profil...",
           "success"
         );
         window.location.href = "profil.html";
@@ -875,28 +806,31 @@
       profilePhone: user.telephone || "-",
       profileRole: (user.role || "chauffeur").toUpperCase(),
       profileCity: user.ville || "Conakry",
-      profileKycStatus: user.kyc_status || "Vérifié"
+      profileQuarter: user.quartier || "-",
+      profileKycStatus: user.kyc_status || "Actif"
     };
 
     Object.entries(fieldMap).forEach(([id, value]) => {
       const el = document.getElementById(id);
       if (el) el.textContent = value;
     });
-
-    const selfieImg = document.getElementById("profileSelfie");
-    if (selfieImg && user.selfie_data) {
-      selfieImg.src = user.selfie_data;
-      selfieImg.style.display = "block";
-    }
   }
 
   function initDriverPage() {
     if (!["chauffeur.html", "demande.html"].includes(getCurrentPage())) return;
     const form = document.getElementById("breakdownForm") || document.querySelector("form");
     const listContainer = document.getElementById("driverRequestsList");
+    const activeCountEl = document.getElementById("driverActiveCount");
+    const totalGnfEl = document.getElementById("driverTotalGnf");
     const user = getStoredUser();
 
     function renderDriverList(items) {
+      if (activeCountEl) activeCountEl.textContent = String(items.length);
+      if (totalGnfEl) {
+        const sum = items.reduce((acc, it) => acc + Number(it.montant_gnf || 0), 0);
+        totalGnfEl.textContent = formatGnf(sum);
+      }
+
       if (!listContainer) return;
       if (!items.length) {
         listContainer.innerHTML = "<p>Aucune demande d'intervention enregistrée.</p>";
@@ -915,7 +849,7 @@
     }
 
     async function loadDriverRequests() {
-      if (!listContainer) return;
+      if (!listContainer && !activeCountEl && !totalGnfEl) return;
       try {
         const data = await apiRequest("/interventions", {}, 2500);
         const items = Array.isArray(data) ? data : data.interventions || [];
@@ -1176,6 +1110,53 @@
     loadPayments();
   }
 
+  function initNotificationsPage() {
+    if (getCurrentPage() !== "notifications.html") return;
+    const container = document.getElementById("notificationsList");
+    const clearBtn = document.getElementById("clearNotificationsBtn");
+    if (!container) return;
+
+    const interventions = readJsonStorage(STORAGE_INTERVENTIONS_KEY, []);
+    const payments = readJsonStorage(STORAGE_PAYMENTS_KEY, []);
+
+    const feed = [
+      ...interventions.map((i) => ({
+        title: `Intervention : ${i.type_panne || "Dépannage"} (${i.statut || "en_attente"})`,
+        detail: `Lieu : ${i.localisation || "Guinée"} — ${formatGnf(i.montant_gnf)}`
+      })),
+      ...payments.map((p) => ({
+        title: `Paiement ${p.operateur || "Mobile Money"} (${p.statut || "confirme"})`,
+        detail: `${formatGnf(p.montant_gnf)} — ${p.telephone || ""}`
+      }))
+    ];
+
+    if (!feed.length) {
+      feed.push({
+        title: "Bienvenue sur MécaConnect Guinée",
+        detail: "Votre compte est actif. Créez une demande SOS ou consultez les missions disponibles."
+      });
+    }
+
+    container.innerHTML = feed
+      .map(
+        (n) => `
+        <div class="card" style="margin-bottom: 10px;">
+          <strong>${escapeHtml(n.title)}</strong>
+          <p class="kyc-hint" style="margin: 4px 0 0;">${escapeHtml(n.detail)}</p>
+        </div>`
+      )
+      .join("");
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        document.querySelectorAll("[data-notif-badge]").forEach((b) => {
+          b.textContent = "0";
+        });
+        container.innerHTML = "<p class='kyc-hint'>Toutes les notifications ont été marquées comme lues.</p>";
+      });
+    }
+  }
+
   async function initAdminPage() {
     if (getCurrentPage() !== "admin.html") return;
     const statusBox = document.getElementById("adminStatus");
@@ -1228,7 +1209,7 @@
             <td>${escapeHtml(u.telephone || "-")}</td>
             <td>${escapeHtml(u.role || "-")}</td>
             <td>${escapeHtml(u.ville || "Conakry")}</td>
-            <td>${escapeHtml(u.kyc_status || "Vérifié")}</td>
+            <td>${escapeHtml(u.kyc_status || "Actif")}</td>
           </tr>`
         )
         .join("");
@@ -1275,6 +1256,7 @@
     initDriverPage();
     initMechanicPage();
     initPaymentPage();
+    initNotificationsPage();
     initAdminPage();
   });
 })();

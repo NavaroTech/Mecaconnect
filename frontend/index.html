@@ -3,31 +3,28 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Accueil — MecaConnect Guinée</title>
+    <title>Accueil — MécaConnect Guinée</title>
     <link rel="stylesheet" href="style.css" />
 </head>
-<body class="accueil-page">
+<body>
     <header class="topbar topbar-light">
         <div class="topbar-brand">
             <a href="index.html" class="logo">🔧 <span>MécaConnect</span> <small>Chauffeurs &amp; Mécaniciens connectés</small></a>
         </div>
-
         <div class="topbar-actions">
-            <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span class="gn-pill">🇬🇳 GN</span>
             <span id="apiStatusBadge" class="api-badge">Vérification API...</span>
             <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
-            <a href="notifications.html" class="btn-notif">
-                🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
-            </a>
-            <a href="connexion.html" class="btn-ghost-auth auth-guest-only" data-auth-login>Se connecter</a>
+            <a href="notifications.html" class="btn-notif">🔔 Notifications <span class="notif-badge" data-notif-badge>0</span></a>
+            <a href="connexion.html" class="btn-ghost-auth auth-guest-only">Se connecter</a>
             <a href="inscription.html" class="btn-cta-orange auth-guest-only">Créer un compte</a>
-            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+            <button type="button" id="logoutBtn" class="btn-logout hidden" data-auth-logout>Déconnexion</button>
         </div>
     </header>
 
     <div class="sub-nav-bar">
         <a href="index.html" class="sub-nav-link active">🏠 Accueil</a>
-        <a href="inscription.html" class="sub-nav-link">🪪 Inscription KYC</a>
+        <a href="inscription.html" class="sub-nav-link">📝 Inscription</a>
         <a href="connexion.html" class="sub-nav-link">🔐 Connexion</a>
         <a href="paiement.html" class="sub-nav-link">💳 Paiements GNF</a>
     </div>
@@ -48,24 +45,21 @@
 
         <main class="main-content">
             <section class="card">
-                <h1>🔧 MecaConnect Guinée</h1>
-                <p>
-                    Mise en relation rapide entre chauffeurs, mécaniciens et ateliers en République de Guinée (+224), avec paiements en Francs guinéens (GNF).
-                </p>
+                <h1>Assistance mécanique rapide en Guinée</h1>
+                <p>Connectez les conducteurs en panne aux mécaniciens de proximité à Conakry, Labé, Kankan, Nzérékoré et dans tout le pays, avec estimation et règlement en Francs guinéens (GNF).</p>
                 <div class="hero-actions">
-                    <a href="inscription.html" class="btn-primary">🪪 Inscription &amp; Vérification KYC</a>
-                    <a href="connexion.html" class="btn-secondary">🔐 Connexion</a>
-                    <a href="paiement.html" class="btn-pay">💳 Paiements GNF</a>
-                    <button type="button" id="btnTestApi" class="btn-secondary">Tester l'API &amp; la Base</button>
+                    <a href="demande.html" class="btn-primary">🚨 Demander un dépannage</a>
+                    <a href="inscription.html" class="btn-secondary auth-guest-only">📝 S'inscrire</a>
+                    <button type="button" id="btnTestApi" class="btn-pay">🔌 Tester la connexion</button>
                 </div>
                 <div id="loginStatus" class="status-box hidden"></div>
             </section>
 
-            <section class="card" style="max-width: 560px;">
-                <h2>Estimation rapide (GNF)</h2>
-                <div class="form-group">
-                    <label for="amountGnf">Montant estimé / prestation (GNF)</label>
-                    <input type="number" id="amountGnf" name="amountGnf" value="150000" min="0" step="5000" />
+            <section class="card">
+                <h2>Convertisseur &amp; aperçu tarifaire (GNF)</h2>
+                <div class="form-group" style="max-width: 360px;">
+                    <label for="amountGnf">Montant estimé (GNF)</label>
+                    <input type="number" id="amountGnf" value="150000" min="0" step="5000" />
                     <span id="formattedAmount" class="kyc-hint">Montant formaté : 150 000 GNF</span>
                 </div>
             </section>
