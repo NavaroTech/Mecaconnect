@@ -14,12 +14,13 @@
 
         <div class="topbar-actions">
             <span class="gn-pill" title="Réseau Guinée">🇬🇳 GN</span>
+            <span id="apiStatusBadge" class="api-badge">Vérification API...</span>
             <span class="user-greeting">Bonjour, <strong data-user-name>Invité</strong></span>
             <a href="notifications.html" class="btn-notif">
                 🔔 Notifications <span class="notif-badge" data-notif-badge>0</span>
             </a>
             <a href="connexion.html" class="btn-ghost-auth auth-guest-only" data-auth-login>Se connecter</a>
-            <button type="button" id="logoutBtn" class="btn-logout" data-auth-logout>Déconnexion</button>
+            <button type="button" id="logoutBtn" class="btn-logout hidden" data-auth-logout>Déconnexion</button>
         </div>
     </header>
 
@@ -46,65 +47,70 @@
 
         <main class="main-content">
             <section class="form-card">
-                <h1>Inscription &amp; Vérification KYC</h1>
-                <p>
-                    Créez votre compte chauffeur ou mécanicien en Guinée avec vérification par e-mail, SMS (+224) et pièce d'identité.
-                </p>
+                <div class="page-header">
+                    <div>
+                        <h1>🪪 Inscription &amp; Vérification KYC</h1>
+                        <p class="kyc-hint">
+                            Créez votre compte chauffeur ou mécanicien en Guinée (+224) avec validation SMS, e-mail et pièce d'identité.
+                        </p>
+                    </div>
+                    <span id="kycBadge" class="status-badge">KYC : Non vérifié</span>
+                </div>
 
                 <form id="inscriptionForm" novalidate>
-                    <div class="section-title">Informations personnelles</div>
+                    <div class="section-title">1. Informations personnelles</div>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="nomComplet">Nom complet</label>
-                            <input type="text" id="nomComplet" name="nom_complet" placeholder="Ex. Mamadou Bah" required />
+                            <label for="nomComplet">Nom complet *</label>
+                            <input type="text" id="nomComplet" name="nom_complet" placeholder="Ex. Mamadou Alpha Bah" autocomplete="name" required />
                         </div>
 
                         <div class="form-group">
-                            <label for="telephone">Téléphone (+224)</label>
+                            <label for="telephone">Téléphone Guinée (+224) *</label>
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="tel" id="telephone" name="telephone" placeholder="Ex. +224 620 00 00 00" required />
+                                <input type="tel" id="telephone" name="telephone" placeholder="Ex. +224 620 00 00 00" autocomplete="tel" required />
                                 <button type="button" id="sendSmsBtn" class="btn-secondary" style="white-space: nowrap;">Envoyer SMS</button>
                             </div>
-                            <small id="smsStatusHint" class="kyc-hint">Vérification du numéro guinéen (+224) par code SMS.</small>
+                            <small id="smsStatusHint" class="kyc-hint" aria-live="polite">Formats acceptés : +224 6XX XX XX XX ou 6XX XX XX XX.</small>
                         </div>
 
-                        <div class="form-group" id="smsOtpGroup" style="display: none;">
-                            <label for="smsOtp">Code SMS (+224 — 6 chiffres)</label>
+                        <div class="form-group" id="smsOtpGroup" class="hidden">
+                            <label for="smsOtp">Code SMS (+224 — 6 chiffres) *</label>
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="text" id="smsOtp" name="sms_otp" maxlength="6" inputmode="numeric" placeholder="Ex. 192837" />
+                                <input type="text" id="smsOtp" name="sms_otp" maxlength="6" pattern="\d{6}" inputmode="numeric" placeholder="Ex. 192837" />
                                 <button type="button" id="verifySmsBtn" class="btn-primary" style="white-space: nowrap;">Valider SMS</button>
                             </div>
-                            <small id="smsOtpStatusHint" class="kyc-hint"></small>
+                            <small id="smsOtpStatusHint" class="kyc-hint" aria-live="polite"></small>
                         </div>
 
                         <div class="form-group">
-                            <label for="email">Adresse e-mail</label>
+                            <label for="email">Adresse e-mail *</label>
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="email" id="email" name="email" placeholder="Ex. mamadou@exemple.gn" required />
+                                <input type="email" id="email" name="email" placeholder="Ex. mamadou@exemple.gn" autocomplete="email" required />
                                 <button type="button" id="sendOtpBtn" class="btn-secondary" style="white-space: nowrap;">Envoyer le code</button>
                             </div>
-                            <small id="emailStatusHint" class="kyc-hint">Un code à 6 chiffres sera envoyé pour confirmer l'adresse e-mail.</small>
+                            <small id="emailStatusHint" class="kyc-hint" aria-live="polite">Un code à 6 chiffres sera envoyé par e-mail.</small>
                         </div>
 
-                        <div class="form-group" id="otpGroup" style="display: none;">
-                            <label for="emailOtp">Code de vérification e-mail (6 chiffres)</label>
+                        <div class="form-group" id="otpGroup" class="hidden">
+                            <label for="emailOtp">Code de vérification e-mail (6 chiffres) *</label>
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="text" id="emailOtp" name="email_otp" maxlength="6" inputmode="numeric" placeholder="Ex. 482910" />
+                                <input type="text" id="emailOtp" name="email_otp" maxlength="6" pattern="\d{6}" inputmode="numeric" placeholder="Ex. 482910" />
                                 <button type="button" id="verifyOtpBtn" class="btn-primary" style="white-space: nowrap;">Valider le code</button>
                             </div>
-                            <small id="otpStatusHint" class="kyc-hint"></small>
+                            <small id="otpStatusHint" class="kyc-hint" aria-live="polite"></small>
                         </div>
 
                         <div class="form-group">
-                            <label for="roleCompte">Rôle sur la plateforme</label>
+                            <label for="roleCompte">Rôle sur la plateforme *</label>
                             <select id="roleCompte" name="role" required>
-                                <option value="chauffeur">Chauffeur</option>
-                                <option value="mecanicien">Mécanicien / Atelier</option>
+                                <option value="chauffeur">🚗 Chauffeur</option>
+                                <option value="mecanicien">🛠️ Mécanicien / Atelier</option>
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="ville">Ville / Préfecture</label>
+                            <label for="ville">Ville / Préfecture *</label>
                             <select id="ville" name="ville" required>
                                 <option value="Conakry">Conakry</option>
                                 <option value="Labé">Labé</option>
@@ -118,15 +124,15 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="quartier">Quartier / Commune</label>
-                            <input type="text" id="quartier" name="quartier" placeholder="Ex. Kipé ou Centre-ville" required />
+                            <label for="quartier">Quartier / Commune *</label>
+                            <input type="text" id="quartier" name="quartier" placeholder="Ex. Kipé, Daka ou Centre-ville" required />
                         </div>
                     </div>
 
-                    <div class="section-title">Pièce d'identité officielle (Guinée)</div>
+                    <div class="section-title">2. Pièce d'identité officielle (Guinée)</div>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="typePiece">Type de pièce d'identité</label>
+                            <label for="typePiece">Type de pièce d'identité *</label>
                             <select id="typePiece" name="type_piece" required>
                                 <option value="CNI Guinée">CNI Guinée</option>
                                 <option value="Passeport">Passeport</option>
@@ -135,16 +141,16 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="numeroPiece">Numéro de la pièce</label>
+                            <label for="numeroPiece">Numéro de la pièce *</label>
                             <input type="text" id="numeroPiece" name="numero_piece" placeholder="Ex. CNI-GN-001234" required />
                         </div>
 
                         <div class="form-group">
-                            <label for="dateExpiration">Date d'expiration de la pièce</label>
+                            <label for="dateExpiration">Date d'expiration de la pièce *</label>
                             <input type="date" id="dateExpiration" name="date_expiration" required />
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" id="atelierGroup">
                             <label for="refAtelier">Référence atelier (si mécanicien)</label>
                             <input type="text" id="refAtelier" name="ref_atelier" placeholder="Ex. ATELIER-LABE-01" />
                         </div>
@@ -152,16 +158,17 @@
 
                     <div class="kyc-grid">
                         <div class="kyc-box">
-                            <label for="photoPiece">1. Photo nette de la pièce d'identité (visage visible)</label>
-                            <input type="file" id="photoPiece" name="photo_piece" accept="image/*" required />
-                            <p class="kyc-hint" id="docCheckStatus">Un seul compte est autorisé par document d'identité.</p>
+                            <label for="photoPiece">1. Photo nette de la pièce d'identité *</label>
+                            <input type="file" id="photoPiece" name="photo_piece" accept="image/jpeg,image/png,image/webp" required />
+                            <img id="docPreview" alt="Aperçu pièce d'identité" class="hidden" style="width:100%; max-height:160px; object-fit:contain; border-radius:8px; margin-top:10px; background:#f8fafc;" />
+                            <p class="kyc-hint" id="docCheckStatus" aria-live="polite">Formats JPG, PNG ou WEBP (max. 5 Mo). Un seul compte par document.</p>
                         </div>
 
                         <div class="kyc-box">
-                            <label>2. Selfie en direct (caméra)</label>
-                            <p class="kyc-hint" id="selfieStatus">Cliquez sur « Activer la caméra » puis « Prendre le selfie ».</p>
-                            <video id="selfieVideo" autoplay playsinline style="display:none; width:100%; max-height:180px; border-radius:8px; margin-top:8px;"></video>
-                            <img id="selfiePreview" alt="Aperçu selfie KYC" style="display:none; width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-top:8px;" />
+                            <label>2. Selfie en direct (caméra) *</label>
+                            <p class="kyc-hint" id="selfieStatus" aria-live="polite">Activez la caméra, cadrez votre visage, puis capturez votre selfie.</p>
+                            <video id="selfieVideo" autoplay playsinline muted class="hidden" style="width:100%; max-height:180px; border-radius:8px; margin-top:8px;"></video>
+                            <img id="selfiePreview" alt="Aperçu selfie KYC" class="hidden" style="width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-top:8px;" />
                             <div class="kyc-actions">
                                 <button type="button" id="startCameraBtn" class="btn-secondary">📷 Activer la caméra</button>
                                 <button type="button" id="takeSelfieBtn" class="btn-primary" disabled>🤳 Prendre le selfie</button>
@@ -169,17 +176,26 @@
                         </div>
                     </div>
 
-                    <div class="section-title">Sécurité du compte</div>
-                    <div class="form-group">
-                        <label for="motDePasse">Mot de passe</label>
-                        <input type="password" id="motDePasse" name="mot_de_passe" placeholder="Choisissez un mot de passe (min. 6 caractères)" required />
+                    <div class="section-title">3. Sécurité du compte</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="motDePasse">Mot de passe *</label>
+                            <input type="password" id="motDePasse" name="mot_de_passe" minlength="6" autocomplete="new-password" placeholder="Minimum 6 caractères" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmMotDePasse">Confirmer le mot de passe *</label>
+                            <input type="password" id="confirmMotDePasse" name="confirm_mot_de_passe" minlength="6" autocomplete="new-password" placeholder="Répétez le mot de passe" required />
+                        </div>
                     </div>
 
                     <div class="hero-actions">
                         <button type="submit" id="submitInscriptionBtn" class="btn-primary">Vérifier mon identité et créer le compte</button>
+                        <button type="reset" id="resetFormBtn" class="btn-secondary">Réinitialiser</button>
                         <a href="connexion.html" class="btn-secondary">J'ai déjà un compte</a>
                     </div>
-                    <p id="inscriptionFeedback" class="kyc-hint" style="margin-top: 12px;"></p>
+
+                    <div id="inscriptionFeedback" class="status-box hidden" role="status" aria-live="polite"></div>
                 </form>
             </section>
         </main>
